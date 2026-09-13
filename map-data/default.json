@@ -745,5 +745,97 @@
   },
   "hubs": [],
   "outposts": [],
-  "cities": []
+  "cities": [],
+  "dominions": [
+    {
+      "col": 35,
+      "row": 125,
+      "label": "Healer's Refuge"
+    },
+    {
+      "col": 47,
+      "row": 80,
+      "label": "Fertile Sanctuary"
+    },
+    {
+      "col": 60,
+      "row": 125,
+      "label": "Verdant Grove"
+    },
+    {
+      "col": 80,
+      "row": 47,
+      "label": "Crumbling Rampart"
+    },
+    {
+      "col": 80,
+      "row": 203,
+      "label": "Abandoned Mine"
+    },
+    {
+      "col": 101,
+      "row": 59,
+      "label": "Ancient Forge"
+    },
+    {
+      "col": 101,
+      "row": 191,
+      "label": "Crystal Mine"
+    },
+    {
+      "col": 149,
+      "row": 59,
+      "label": "Iron Bastion"
+    },
+    {
+      "col": 149,
+      "row": 191,
+      "label": "Ruined Archive"
+    },
+    {
+      "col": 170,
+      "row": 47,
+      "label": "Abandoned Mine"
+    },
+    {
+      "col": 170,
+      "row": 203,
+      "label": "Stonemason's Hall"
+    },
+    {
+      "col": 190,
+      "row": 125,
+      "label": "War Monument"
+    },
+    {
+      "col": 203,
+      "row": 170,
+      "label": "Old Barracks"
+    },
+    {
+      "col": 215,
+      "row": 125,
+      "label": "Watchtower Ruins"
+    },
+    {
+      "col": 125,
+      "row": 125,
+      "label": "The Throne"
+    },
+    {
+      "col": 147,
+      "row": 125,
+      "label": "Eastern Watchtower"
+    },
+    {
+      "col": 114,
+      "row": 106,
+      "label": "Northwestern Watchtower"
+    },
+    {
+      "col": 114,
+      "row": 144,
+      "label": "Southwestern Watchtower"
+    }
+  ]
 }

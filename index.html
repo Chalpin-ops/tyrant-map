@@ -117,6 +117,10 @@ canvas{display:block}
     <button class="tool-btn"        id="btn-outpost" onclick="setTool('outpost')">◈ Outpost</button>
     <button class="tool-btn"        id="btn-city"    onclick="setTool('city')">🏙 City</button>
     <button class="tool-btn"        id="btn-erase"   onclick="setTool('erase')">✕ Erase</button>
+    <!-- Design-only: placing a *new* Dominion. Existing ones can still be
+         dragged/renamed by anyone regardless of mode (e.g. to reposition a
+         Watchtower after the Throne is recaptured) — see markerAt(). -->
+    <button class="tool-btn"        id="btn-dominion" onclick="setTool('dominion')">👑 Dominion</button>
     <!-- Design-only controls (terrain painting) — hidden unless the page is opened with ?design -->
     <button class="tool-btn"        id="btn-terrain" onclick="setTool('terrain')">⬢ Terrain</button>
     <div id="terrain-palette">
@@ -138,6 +142,7 @@ canvas{display:block}
     <span class="leg"><span class="ls" style="background:#4a7aff;opacity:0.6"></span>Hub territory (default colour)</span>
     <span class="leg"><span class="ls" style="background:#ffa040;opacity:0.6"></span>Outpost territory (default colour)</span>
     <span class="leg"><span class="ls" style="background:#d4a017;border:1px solid #ffe08a"></span>City (default colour)</span>
+    <span class="leg"><span class="ls" style="background:#8e44ad;opacity:0.6"></span>Dominion no-build zone (default colour)</span>
     <span class="leg">Impassable terrain (🚫 in the Terrain palette) blocks Hub/Outpost/City placement</span>
     <span class="leg">Click a placed marker to rename/recolour it</span>
   </div>
@@ -176,11 +181,12 @@ const CORE_R  = 56;    // Core radius in hexes
 const MID_R   = 105;   // Midlands outer radius in hexes
 const HUB_R   = 10;    // Guild hub territory radius
 const OUT_R   = 5;     // Outpost territory radius
+const DOM_R   = 6;     // Dominion no-build radius — Hub/Outpost/City can't be placed or dragged this close to one
 
 // Default marker colours — overridden per-marker via the rename/recolour
 // dialog (click a placed marker without dragging it), e.g. to colour-code
 // a "war map" by owning guild/alliance.
-const MARKER_DEFAULTS = { hub: '#2a5aff', outpost: '#e07800', city: '#d4a017' };
+const MARKER_DEFAULTS = { hub: '#2a5aff', outpost: '#e07800', city: '#d4a017', dominion: '#8e44ad' };
 
 // Zone base colours (fill / border) — Core innermost, Sanctuary outermost
 const RING = {
@@ -252,6 +258,7 @@ let S = {
   hubs:     [],   // [{ col, row, label }]
   outposts: [],   // [{ col, row, label }]
   cities:   [],   // [{ col, row, label }]
+  dominions: [],  // [{ col, row, label }] — contested points; see DOM_R above
   tool:     'pan',
   ttype:    'deadlands',
   pan:      { x: 0, y: 0 },
@@ -273,10 +280,11 @@ async function loadDefaultMap() {
     const res = await fetch('map-data/default.json', { cache: 'no-store' });
     if (!res.ok) return;
     const d = await res.json();
-    if (d.terrain)  S.terrain  = d.terrain;
-    if (d.hubs)     S.hubs     = d.hubs;
-    if (d.outposts) S.outposts = d.outposts;
-    if (d.cities)   S.cities   = d.cities;
+    if (d.terrain)   S.terrain   = d.terrain;
+    if (d.hubs)      S.hubs      = d.hubs;
+    if (d.outposts)  S.outposts  = d.outposts;
+    if (d.cities)    S.cities    = d.cities;
+    if (d.dominions) S.dominions = d.dominions;
   } catch (e) {
     console.warn('Could not load map-data/default.json (needs a local server or GitHub Pages — see README):', e);
   }
@@ -470,8 +478,9 @@ function render() {
   // Territory overlays — tinted per-marker so a colour-coded "war map" shows
   // overlapping claims clearly (see MARKER_DEFAULTS / the rename dialog)
   ctx.globalAlpha = 0.28;
-  S.hubs    .forEach(h => drawTerritory(h.col, h.row, HUB_R, h.color || MARKER_DEFAULTS.hub));
-  S.outposts.forEach(o => drawTerritory(o.col, o.row, OUT_R, o.color || MARKER_DEFAULTS.outpost));
+  S.hubs     .forEach(h => drawTerritory(h.col, h.row, HUB_R, h.color || MARKER_DEFAULTS.hub));
+  S.outposts .forEach(o => drawTerritory(o.col, o.row, OUT_R, o.color || MARKER_DEFAULTS.outpost));
+  S.dominions.forEach(d => drawTerritory(d.col, d.row, DOM_R, d.color || MARKER_DEFAULTS.dominion));
   ctx.globalAlpha = 1;
 
   // Hub, outpost and city icons (only when zoomed in enough)
@@ -532,6 +541,29 @@ function render() {
         ctx.fillText(c.label, x, y + r + 2);
       }
     });
+
+    // Dominions get a hex-shaped badge — distinct from the circle/triangle/
+    // diamond used above, and a nod to them being contested points on the
+    // hex grid itself. Swap in per-dominion art via an `img` field later the
+    // same way TERRAIN images work, once real icons exist.
+    S.dominions.forEach(d => {
+      const { x, y } = h2p(d.col, d.row);
+      const r = Math.min(s * 0.5, 13);
+      const color = d.color || MARKER_DEFAULTS.dominion;
+      hexPath(x, y, r);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(8, Math.min(s * 0.4, 10))}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('D', x, y);
+      if (d.label && s > 6) {
+        ctx.fillStyle = color;
+        ctx.font = `${Math.max(7, Math.min(s * 0.38, 10))}px sans-serif`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(d.label, x, y + r + 2);
+      }
+    });
   }
 
   // Zone labels at high zoom — positioned inside their own ring
@@ -553,7 +585,7 @@ function render() {
 // ── Tool & interaction ─────────────────────────
 function setTool(t) {
   S.tool = t;
-  ['pan', 'hub', 'outpost', 'city', 'terrain', 'erase'].forEach(id => {
+  ['pan', 'hub', 'outpost', 'city', 'dominion', 'terrain', 'erase'].forEach(id => {
     document.getElementById('btn-' + id)?.classList.toggle('active', id === t);
   });
   document.getElementById('terrain-palette').style.display = (t === 'terrain' && DESIGN_MODE) ? 'block' : 'none';
@@ -572,9 +604,18 @@ function hubZoneBlocked(col, row) {
   return ring(col, row) === 0;
 }
 
+// Dominions are contested no-build zones — nothing can be teleported to or
+// placed within DOM_R of one, regardless of terrain or zone. Returns the
+// dominion's label (for messaging) or null.
+function dominionBlockLabel(col, row) {
+  const hit = S.dominions.find(d => hdist(col, row, d.col, d.row) <= DOM_R);
+  return hit ? hit.label : null;
+}
+
 function canPlace(col, row, type) {
   if (blockingLabel(col, row)) return false;
   if (type === 'hub' && hubZoneBlocked(col, row)) return false;
+  if ((type === 'hub' || type === 'outpost' || type === 'city') && dominionBlockLabel(col, row)) return false;
   return true;
 }
 
@@ -587,6 +628,8 @@ function markerAt(col, row) {
   if (idx > -1) return { list: S.outposts, idx, type: 'outpost' };
   idx = S.cities.findIndex(m => m.col === col && m.row === row);
   if (idx > -1) return { list: S.cities, idx, type: 'city' };
+  idx = S.dominions.findIndex(m => m.col === col && m.row === row);
+  if (idx > -1) return { list: S.dominions, idx, type: 'dominion' };
   return null;
 }
 
@@ -613,6 +656,7 @@ function applyToolAt(col, row) {
     S.terrain[key] = S.ttype;
   } else if (S.tool === 'erase') {
     if (DESIGN_MODE) delete S.terrain[key];
+    if (DESIGN_MODE) S.dominions = S.dominions.filter(d => !(d.col === col && d.row === row));
     S.hubs     = S.hubs    .filter(h => !(h.col === col && h.row === row));
     S.outposts = S.outposts.filter(o => !(o.col === col && o.row === row));
     S.cities   = S.cities  .filter(c => !(c.col === col && c.row === row));
@@ -630,10 +674,12 @@ async function handleClick(col, row) {
   const key = `${col},${row}`;
   const rname = RING.label[ring(col, row)];
   const blocker = blockingLabel(col, row);
+  const domBlocker = dominionBlockLabel(col, row);
 
   if (S.tool === 'hub') {
     if (blocker) { infoEl.textContent = `Can't place a Hub on ${blocker} at (${col},${row}).`; return; }
     if (hubZoneBlocked(col, row)) { infoEl.textContent = `Can't place a Hub in the Core zone at (${col},${row}) — Hub territory can still reach into Core.`; return; }
+    if (domBlocker) { infoEl.textContent = `Can't place a Hub within ${DOM_R} tiles of the "${domBlocker}" dominion at (${col},${row}).`; return; }
     const info = await askMarkerInfo(`Hub at (${col},${row})`, 'Hub', MARKER_DEFAULTS.hub);
     if (info === null) return;
     S.hubs.push({ col, row, label: info.label, color: info.color });
@@ -641,6 +687,7 @@ async function handleClick(col, row) {
 
   } else if (S.tool === 'outpost') {
     if (blocker) { infoEl.textContent = `Can't place an Outpost on ${blocker} at (${col},${row}).`; return; }
+    if (domBlocker) { infoEl.textContent = `Can't place an Outpost within ${DOM_R} tiles of the "${domBlocker}" dominion at (${col},${row}).`; return; }
     const info = await askMarkerInfo(`Outpost at (${col},${row})`, 'Outpost', MARKER_DEFAULTS.outpost);
     if (info === null) return;
     S.outposts.push({ col, row, label: info.label, color: info.color });
@@ -648,10 +695,17 @@ async function handleClick(col, row) {
 
   } else if (S.tool === 'city') {
     if (blocker) { infoEl.textContent = `Can't place a City on ${blocker} at (${col},${row}).`; return; }
+    if (domBlocker) { infoEl.textContent = `Can't place a City within ${DOM_R} tiles of the "${domBlocker}" dominion at (${col},${row}).`; return; }
     const info = await askMarkerInfo(`City at (${col},${row})`, 'City', MARKER_DEFAULTS.city);
     if (info === null) return;
     S.cities.push({ col, row, label: info.label, color: info.color });
     infoEl.textContent = `City "${info.label}" placed at (${col},${row}) — ${rname}.`;
+
+  } else if (S.tool === 'dominion' && DESIGN_MODE) {
+    const info = await askMarkerInfo(`Dominion at (${col},${row})`, 'Dominion', MARKER_DEFAULTS.dominion);
+    if (info === null) return;
+    S.dominions.push({ col, row, label: info.label, color: info.color });
+    infoEl.textContent = `Dominion "${info.label}" placed at (${col},${row}) — ${rname}. No-build radius: ${DOM_R}.`;
 
   } else if (S.tool === 'terrain' && DESIGN_MODE) {
     applyToolAt(col, row);
@@ -667,17 +721,17 @@ async function handleClick(col, row) {
 // ── Export / import ────────────────────────────
 function clearAll() {
   if (DESIGN_MODE) {
-    if (!confirm('Clear everything, including terrain?')) return;
-    S.terrain = {}; S.hubs = []; S.outposts = []; S.cities = [];
+    if (!confirm('Clear everything, including terrain and Dominions?')) return;
+    S.terrain = {}; S.hubs = []; S.outposts = []; S.cities = []; S.dominions = [];
   } else {
-    if (!confirm('Clear all placed Hubs, Outposts, and Cities?')) return;
+    if (!confirm('Clear all placed Hubs, Outposts, and Cities? (Dominions are left as-is.)')) return;
     S.hubs = []; S.outposts = []; S.cities = [];
   }
   render();
 }
 
 function exportJSON() {
-  const data = JSON.stringify({ terrain: S.terrain, hubs: S.hubs, outposts: S.outposts, cities: S.cities }, null, 2);
+  const data = JSON.stringify({ terrain: S.terrain, hubs: S.hubs, outposts: S.outposts, cities: S.cities, dominions: S.dominions }, null, 2);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
   a.download = 'tyrant_map.json'; a.click();
@@ -691,10 +745,11 @@ function importJSON() {
     reader.onload = ev => {
       try {
         const d = JSON.parse(ev.target.result);
-        if (d.terrain)  S.terrain  = d.terrain;
-        if (d.hubs)     S.hubs     = d.hubs;
-        if (d.outposts) S.outposts = d.outposts;
-        if (d.cities)   S.cities   = d.cities;
+        if (d.terrain)   S.terrain   = d.terrain;
+        if (d.hubs)      S.hubs      = d.hubs;
+        if (d.outposts)  S.outposts  = d.outposts;
+        if (d.cities)    S.cities    = d.cities;
+        if (d.dominions) S.dominions = d.dominions;
         render();
         infoEl.textContent = 'Map imported successfully.';
       } catch (e) { alert('Invalid JSON file.'); }
@@ -704,14 +759,15 @@ function importJSON() {
   inp.click();
 }
 
-// Downloads the current terrain + Hub/Outpost/City markers as default.json.
-// Move the download into map-data/ (replacing the existing default.json) and
-// commit it — index.html then auto-loads it for anyone (see loadDefaultMap
-// above), so this is how the baseline map actually lives in the repo, ready
-// for you or a collaborator to open in design mode and keep editing.
+// Downloads the current terrain + Hub/Outpost/City/Dominion markers as
+// default.json. Move the download into map-data/ (replacing the existing
+// default.json) and commit it — index.html then auto-loads it for anyone
+// (see loadDefaultMap above), so this is how the baseline map actually lives
+// in the repo, ready for you or a collaborator to open in design mode and
+// keep editing.
 function saveDefaultMap() {
   if (!DESIGN_MODE) return;
-  const data = JSON.stringify({ terrain: S.terrain, hubs: S.hubs, outposts: S.outposts, cities: S.cities }, null, 2);
+  const data = JSON.stringify({ terrain: S.terrain, hubs: S.hubs, outposts: S.outposts, cities: S.cities, dominions: S.dominions }, null, 2);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
   a.download = 'default.json';
@@ -1075,14 +1131,16 @@ document.getElementById('terrain-search').addEventListener('input', e => renderT
 new ResizeObserver(() => render()).observe(cw);
 
 // ── Boot ───────────────────────────────────────
-// Design-only controls (terrain painting, saving the default) are hidden unless ?design is present.
+// Design-only controls (terrain painting, placing new Dominions, saving the
+// default) are hidden unless ?design is present.
 if (!DESIGN_MODE) {
   document.getElementById('btn-terrain').style.display = 'none';
+  document.getElementById('btn-dominion').style.display = 'none';
   document.getElementById('btn-save-default').style.display = 'none';
 }
 infoEl.textContent = DESIGN_MODE
-  ? '"Pan" is selected by default — safe to look around. Pick Terrain to paint, or Hub/Outpost/City to place. Esc deselects back to Pan.'
-  : '"Pan" is selected by default — safe to look around. Pick Hub/Outpost/City to place, or drag an existing marker to move it. Esc deselects back to Pan.';
+  ? '"Pan" is selected by default — safe to look around. Pick Terrain to paint, Dominion for a new contested point, or Hub/Outpost/City to place. Esc deselects back to Pan.'
+  : '"Pan" is selected by default — safe to look around. Pick Hub/Outpost/City to place, or drag an existing marker (including a Dominion) to move it. Esc deselects back to Pan.';
 
 // Esc is a quick "deselect" back to Pan mode, unless the label dialog is
 // the thing currently capturing input (it has its own Escape-to-cancel).

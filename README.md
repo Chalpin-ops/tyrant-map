@@ -110,7 +110,8 @@ So e.g. `deadRocks.png` goes in `assets/` and lights up the `deadRocks` tile aut
 | Zoom | Scroll wheel | Pinch |
 | Deselect back to Pan | Esc, or click the "🖐 Pan" button | Tap the "🖐 Pan" button |
 | Place Hub/Outpost/City | Click empty hex with that tool active | Tap empty hex |
-| Move a marker | Click-drag the marker itself (any tool except Erase) | Touch-drag the marker |
+| Place a new Dominion (design mode only) | Click empty hex with Dominion tool active | Tap empty hex |
+| Move a marker (Hub/Outpost/City/Dominion) | Click-drag the marker itself (any tool except Erase) | Touch-drag the marker |
 | Rename / recolour a marker | Click the marker without dragging it (any tool except Erase) | Tap without dragging |
 | Paint terrain (design mode only) | Click, or click-drag to paint a stroke, with Terrain tool active | Tap or drag |
 | Erase | Click, or click-drag to erase a stroke, with Erase tool active | Tap or drag |
@@ -121,6 +122,17 @@ Markers can't be placed or dragged onto blocked terrain (see above) — the info
 **Hub-only Core restriction:** a Hub specifically can't be placed or dragged into the Core zone (Outposts and Cities have no such restriction). A Hub sitting just outside Core can still have its territory overlay legitimately reach into Core — this only restricts where the Hub marker itself can sit.
 
 **Quick-erase:** while painting terrain, right-click-drag erases a stroke without switching off whatever brush you have selected — handy for undoing a mistake mid-stroke. It only ever erases terrain, never a Hub/Outpost/City, and only works in design mode; guildmates in the locked-down planner keep their browser's normal right-click menu.
+
+## Dominions
+
+Dominions are contested points worth a buff — a `DOM_R` (6-tile) radius around each one where **no Hub, Outpost, or City can be placed or dragged in**, regardless of terrain or zone. They're drawn as a purple hex badge with a purple-tinted no-build zone (colour changeable per-Dominion the same way as any other marker).
+
+- **Placing a new one** is design-mode only (`?design`) — Dominions are canonical map features, not something an individual guildmate should be creating.
+- **Dragging or renaming an existing one** works in *either* mode — this is deliberate, so anyone can reposition the three rotating Watchtowers after the Throne is recaptured, without needing design-mode access.
+- **Erasing one** is design-mode only, same as terrain — it's map data, not a per-guild placement.
+- No art yet — they render as a plain coloured badge until per-Dominion images are added (not yet supported the way `TERRAIN[key].img` is; ask if you want that wired up once you have the art).
+
+The current known Dominions (including the Throne and the three Watchtowers, whose positions shift each time the Throne is captured) are seeded in `map-data/default.json`. Update their `col`/`row` there — or just drag them on the live map in design mode and re-save — whenever they move.
 
 **Colour-coding a "war map":** placing or clicking a Hub/Outpost/City opens a dialog with a label field and a colour picker. Give different guilds/alliances their own colour and the marker, its label, and its territory overlay (Hub/Outpost) all pick it up — handy for showing contested or allied territory at a glance. Leaving the colour at its default keeps the normal blue/orange/gold scheme.
 
@@ -142,6 +154,9 @@ Exported JSON looks like this — safe to hand-edit:
   ],
   "cities": [
     { "col": 125, "row": 140, "label": "Capital", "color": "#d4a017" }
+  ],
+  "dominions": [
+    { "col": 125, "row": 125, "label": "The Throne", "color": "#8e44ad" }
   ]
 }
 ```
@@ -160,6 +175,7 @@ Edit these at the top of the `<script>` block if the game patches zone sizes:
 | `MID_R` | 105 | Midlands outer radius |
 | `HUB_R` | 10 | Guild hub territory radius |
 | `OUT_R` | 5 | Outpost territory radius |
+| `DOM_R` | 6 | Dominion no-build radius |
 
 Zone order, innermost to outermost: **Core** (d ≤ `CORE_R`) → **Midlands** (d ≤ `MID_R`) → **Sanctuary** (everything beyond).
 
