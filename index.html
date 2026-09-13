@@ -588,8 +588,17 @@ function blockingLabel(col, row) {
   return (t && TERRAIN[t] && TERRAIN[t].block) ? TERRAIN[t].label : null;
 }
 
-function canPlace(col, row) {
-  return !blockingLabel(col, row);
+// Hubs specifically can't sit inside the Core zone (Outposts/Cities can).
+// A Hub's territory overlay can still extend into Core just fine — this only
+// restricts where the Hub marker itself can be placed or dragged to.
+function hubZoneBlocked(col, row) {
+  return ring(col, row) === 0;
+}
+
+function canPlace(col, row, type) {
+  if (blockingLabel(col, row)) return false;
+  if (type === 'hub' && hubZoneBlocked(col, row)) return false;
+  return true;
 }
 
 // Finds the Hub/Outpost/City sitting at (col,row), if any — used to pick a
@@ -647,6 +656,7 @@ async function handleClick(col, row) {
 
   if (S.tool === 'hub') {
     if (blocker) { infoEl.textContent = `Can't place a Hub on ${blocker} at (${col},${row}).`; return; }
+    if (hubZoneBlocked(col, row)) { infoEl.textContent = `Can't place a Hub in the Core zone at (${col},${row}) — Hub territory can still reach into Core.`; return; }
     const info = await askMarkerInfo(`Hub at (${col},${row})`, 'Hub', MARKER_DEFAULTS.hub);
     if (info === null) return;
     S.hubs.push({ col, row, label: info.label, color: info.color });
@@ -914,7 +924,7 @@ window.addEventListener('mousemove', e => {
     // real mice/trackpads almost always report a few pixels of jitter during
     // a "stationary" click, which used to falsely mark every click as a drag
     // and skip straight past the rename/recolour dialog.
-    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row) && (col !== m.col || row !== m.row)) {
+    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row, dragMarker.type) && (col !== m.col || row !== m.row)) {
       m.col = col;
       m.row = row;
       moved = true;
@@ -1043,7 +1053,7 @@ cw.addEventListener('touchmove', e => {
   } else if (e.touches.length === 1 && dragMarker) {
     const rect = cw.getBoundingClientRect();
     const { col, row } = p2h(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row)) {
+    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row, dragMarker.type)) {
       dragMarker.list[dragMarker.idx].col = col;
       dragMarker.list[dragMarker.idx].row = row;
       moved = true;

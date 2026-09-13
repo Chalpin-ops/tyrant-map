@@ -118,6 +118,8 @@ So e.g. `deadRocks.png` goes in `assets/` and lights up the `deadRocks` tile aut
 
 Markers can't be placed or dragged onto blocked terrain (see above) — the info bar explains why if a placement is refused.
 
+**Hub-only Core restriction:** a Hub specifically can't be placed or dragged into the Core zone (Outposts and Cities have no such restriction). A Hub sitting just outside Core can still have its territory overlay legitimately reach into Core — this only restricts where the Hub marker itself can sit.
+
 **Quick-erase:** while painting terrain, right-click-drag erases a stroke without switching off whatever brush you have selected — handy for undoing a mistake mid-stroke. It only ever erases terrain, never a Hub/Outpost/City, and only works in design mode; guildmates in the locked-down planner keep their browser's normal right-click menu.
 
 **Colour-coding a "war map":** placing or clicking a Hub/Outpost/City opens a dialog with a label field and a colour picker. Give different guilds/alliances their own colour and the marker, its label, and its territory overlay (Hub/Outpost) all pick it up — handy for showing contested or allied territory at a glance. Leaving the colour at its default keeps the normal blue/orange/gold scheme.
