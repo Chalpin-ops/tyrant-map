@@ -800,6 +800,7 @@ let dragStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
 let pinch = null;
 let dragMarker = null; // { list, idx } — a Hub/Outpost/City currently being repositioned
 let painting = false, lastPaintKey = null; // a Terrain/Erase drag stroke in progress
+let rightErasing = false, lastRightEraseKey = null; // a right-click-drag terrain erase in progress (design mode)
 
 // Terrain (design mode) and Erase both paint/erase continuously along a
 // drag instead of requiring one click per hex.
@@ -837,7 +838,24 @@ function showTip(clientX, clientY) {
 // from "a canvas interaction is ending" and ignore the former.
 let canvasMouseDown = false;
 
+// Right-click-drag erases terrain — a quick way to undo a painting mistake
+// without switching away from whatever brush you have selected. Design mode
+// only, and terrain-only (never Hub/Outpost/City), so it can't double as an
+// accidental "delete this marker" gesture.
+if (DESIGN_MODE) cw.addEventListener('contextmenu', e => e.preventDefault());
+
 cw.addEventListener('mousedown', e => {
+  if (e.button === 2) {
+    if (!DESIGN_MODE) return;
+    const rect = cw.getBoundingClientRect();
+    const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
+    rightErasing = true;
+    lastRightEraseKey = `${col},${row}`;
+    delete S.terrain[lastRightEraseKey];
+    render();
+    return;
+  }
+
   canvasMouseDown = true;
   const rect = cw.getBoundingClientRect();
   const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
@@ -862,6 +880,17 @@ cw.addEventListener('mousedown', e => {
   }
 });
 window.addEventListener('mousemove', e => {
+  if (rightErasing) {
+    const rect = cw.getBoundingClientRect();
+    const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
+    const k = `${col},${row}`;
+    if (k !== lastRightEraseKey) {
+      delete S.terrain[k];
+      lastRightEraseKey = k;
+      requestRender();
+    }
+    return;
+  }
   if (painting) {
     const rect = cw.getBoundingClientRect();
     const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
@@ -896,6 +925,13 @@ window.addEventListener('mousemove', e => {
   requestRender();
 });
 window.addEventListener('mouseup', e => {
+  if (rightErasing) {
+    rightErasing = false;
+    lastRightEraseKey = null;
+    render();
+    infoEl.textContent = 'Erased terrain along right-click drag.';
+    return;
+  }
   if (!canvasMouseDown) return; // e.g. releasing a click on a toolbar button, not the canvas
   canvasMouseDown = false;
   cw.classList.remove('panning-active');

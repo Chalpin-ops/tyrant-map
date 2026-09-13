@@ -114,8 +114,11 @@ So e.g. `deadRocks.png` goes in `assets/` and lights up the `deadRocks` tile aut
 | Rename / recolour a marker | Click the marker without dragging it (any tool except Erase) | Tap without dragging |
 | Paint terrain (design mode only) | Click, or click-drag to paint a stroke, with Terrain tool active | Tap or drag |
 | Erase | Click, or click-drag to erase a stroke, with Erase tool active | Tap or drag |
+| Quick-erase terrain (design mode only) | Right-click, or right-click-drag | — (no touch equivalent) |
 
 Markers can't be placed or dragged onto blocked terrain (see above) — the info bar explains why if a placement is refused.
+
+**Quick-erase:** while painting terrain, right-click-drag erases a stroke without switching off whatever brush you have selected — handy for undoing a mistake mid-stroke. It only ever erases terrain, never a Hub/Outpost/City, and only works in design mode; guildmates in the locked-down planner keep their browser's normal right-click menu.
 
 **Colour-coding a "war map":** placing or clicking a Hub/Outpost/City opens a dialog with a label field and a colour picker. Give different guilds/alliances their own colour and the marker, its label, and its territory overlay (Hub/Outpost) all pick it up — handy for showing contested or allied territory at a glance. Leaving the colour at its default keeps the normal blue/orange/gold scheme.
 
