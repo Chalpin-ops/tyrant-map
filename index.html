@@ -264,9 +264,13 @@ let S = {
 // Requires being served over http(s) (a local server or GitHub Pages); fetch
 // of a local file:// path is blocked by the browser, same as terrain images —
 // see the README. Silently leaves an empty map if it's missing or blocked.
+// `cache: 'no-store'` matters here: GitHub Pages serves this file with a
+// several-minute Cache-Control max-age, so without it a browser that already
+// loaded the page once could keep showing an outdated map long after a fresh
+// commit lands, even across a hard reload of the page itself.
 async function loadDefaultMap() {
   try {
-    const res = await fetch('map-data/default.json');
+    const res = await fetch('map-data/default.json', { cache: 'no-store' });
     if (!res.ok) return;
     const d = await res.json();
     if (d.terrain)  S.terrain  = d.terrain;
