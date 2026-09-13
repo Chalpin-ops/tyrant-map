@@ -825,17 +825,30 @@
     {
       "col": 147,
       "row": 125,
-      "label": "Eastern Watchtower"
+      "label": "Eastern Watchtower",
+      "movable": true
     },
     {
       "col": 114,
       "row": 106,
-      "label": "Northwestern Watchtower"
+      "label": "Northwestern Watchtower",
+      "movable": true
     },
     {
       "col": 114,
       "row": 144,
-      "label": "Southwestern Watchtower"
+      "label": "Southwestern Watchtower",
+      "movable": true
+    },
+    {
+      "col": 47,
+      "row": 170,
+      "label": "Old Barracks"
+    },
+    {
+      "col": 203,
+      "row": 80,
+      "label": "Fertile Sanctuary"
     }
   ]
 }

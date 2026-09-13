@@ -128,11 +128,11 @@ Markers can't be placed or dragged onto blocked terrain (see above) — the info
 Dominions are contested points worth a buff — a `DOM_R` (6-tile) radius around each one where **no Hub, Outpost, or City can be placed or dragged in**, regardless of terrain or zone. They're drawn as a purple hex badge with a purple-tinted no-build zone (colour changeable per-Dominion the same way as any other marker).
 
 - **Placing a new one** is design-mode only (`?design`) — Dominions are canonical map features, not something an individual guildmate should be creating.
-- **Dragging or renaming an existing one** works in *either* mode — this is deliberate, so anyone can reposition the three rotating Watchtowers after the Throne is recaptured, without needing design-mode access.
+- **Dragging or renaming** is design-mode only *except* for a Dominion explicitly marked `"movable": true` in its JSON — currently just the three Watchtowers — which can be dragged/renamed in either mode, so anyone can reposition them after the Throne is recaptured without needing design-mode access. Everything else (the 15 fixed Dominions + the Throne) is locked to design-mode-only editing, so an ordinary guildmate can't accidentally nudge one.
 - **Erasing one** is design-mode only, same as terrain — it's map data, not a per-guild placement.
 - No art yet — they render as a plain coloured badge until per-Dominion images are added (not yet supported the way `TERRAIN[key].img` is; ask if you want that wired up once you have the art).
 
-The current known Dominions (including the Throne and the three Watchtowers, whose positions shift each time the Throne is captured) are seeded in `map-data/default.json`. Update their `col`/`row` there — or just drag them on the live map in design mode and re-save — whenever they move.
+The current known Dominions (including the Throne and the three Watchtowers, whose positions shift each time the Throne is captured) are seeded in `map-data/default.json`. To make a *new* Dominion draggable outside design mode, add `"movable": true` to its entry there.
 
 **Colour-coding a "war map":** placing or clicking a Hub/Outpost/City opens a dialog with a label field and a colour picker. Give different guilds/alliances their own colour and the marker, its label, and its territory overlay (Hub/Outpost) all pick it up — handy for showing contested or allied territory at a glance. Leaving the colour at its default keeps the normal blue/orange/gold scheme.
 

@@ -619,6 +619,14 @@ function canPlace(col, row, type) {
   return true;
 }
 
+// Most Dominions are fixed map data — only a Dominion explicitly flagged
+// `movable: true` (the three rotating Watchtowers) can be dragged outside
+// design mode. Hub/Outpost/City are always movable by anyone.
+function markerIsMovable(hit) {
+  if (hit.type !== 'dominion') return true;
+  return DESIGN_MODE || hit.list[hit.idx].movable === true;
+}
+
 // Finds the Hub/Outpost/City sitting at (col,row), if any — used to pick a
 // marker up for dragging regardless of which placement tool is active.
 function markerAt(col, row) {
@@ -957,7 +965,7 @@ window.addEventListener('mousemove', e => {
     // real mice/trackpads almost always report a few pixels of jitter during
     // a "stationary" click, which used to falsely mark every click as a drag
     // and skip straight past the rename/recolour dialog.
-    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row, dragMarker.type) && (col !== m.col || row !== m.row)) {
+    if (markerIsMovable(dragMarker) && col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row, dragMarker.type) && (col !== m.col || row !== m.row)) {
       m.col = col;
       m.row = row;
       moved = true;
@@ -1086,7 +1094,7 @@ cw.addEventListener('touchmove', e => {
   } else if (e.touches.length === 1 && dragMarker) {
     const rect = cw.getBoundingClientRect();
     const { col, row } = p2h(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row, dragMarker.type)) {
+    if (markerIsMovable(dragMarker) && col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row, dragMarker.type)) {
       dragMarker.list[dragMarker.idx].col = col;
       dragMarker.list[dragMarker.idx].row = row;
       moved = true;
