@@ -156,8 +156,8 @@ Edit these at the top of the `<script>` block if the game patches zone sizes:
 | `CX / CY` | 125 | Centre coordinates |
 | `CORE_R` | 56 | Core radius (innermost zone) |
 | `MID_R` | 105 | Midlands outer radius |
-| `HUB_R` | 11 | Guild hub territory radius |
-| `OUT_R` | 6 | Outpost territory radius |
+| `HUB_R` | 10 | Guild hub territory radius |
+| `OUT_R` | 5 | Outpost territory radius |
 
 Zone order, innermost to outermost: **Core** (d ≤ `CORE_R`) → **Midlands** (d ≤ `MID_R`) → **Sanctuary** (everything beyond).
 
