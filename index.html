@@ -534,10 +534,6 @@ function render() {
     });
   }
 
-  // Ring boundary lines
-  drawRingEdge(CORE_R, '#8c8880', 1.8);
-  drawRingEdge(MID_R,  '#3a7a3a', 1.8);
-
   // Zone labels at high zoom — positioned inside their own ring
   if (s > 9) {
     ctx.textAlign = 'center';
@@ -551,25 +547,6 @@ function render() {
       ctx.font = 'bold 11px sans-serif';
       ctx.fillText(label, x, y);
     });
-  }
-}
-
-function drawRingEdge(r, color, lw) {
-  const s = hs();
-  const pad  = 3;
-  const rMin = Math.max(0,      Math.floor((0            - canvas.height / 2 - S.pan.y) / (hh() * 0.75) + CY - pad));
-  const rMax = Math.min(GRID-1, Math.ceil((canvas.height - canvas.height / 2 - S.pan.y) / (hh() * 0.75) + CY + pad));
-  ctx.strokeStyle = color; ctx.lineWidth = lw;
-  for (let row = rMin; row <= rMax; row++) {
-    const off  = row % 2 === 0 ? 0 : hw() / 2;
-    const cMin = Math.max(0,      Math.floor((0            - canvas.width  / 2 - S.pan.x - off) / hw() + CX - pad));
-    const cMax = Math.min(GRID-1, Math.ceil((canvas.width  - canvas.width  / 2 - S.pan.x - off) / hw() + CX + pad));
-    for (let col = cMin; col <= cMax; col++) {
-      if (hdist(col, row, CX, CY) === r) {
-        const { x, y } = h2p(col, row);
-        hexPath(x, y, s); ctx.stroke();
-      }
-    }
   }
 }
 
