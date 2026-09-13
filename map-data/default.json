@@ -1,0 +1,24 @@
+{
+  "terrain": {
+    "178,132": "deadMountains",
+    "177,133": "deadMountains",
+    "177,134": "deadMountains",
+    "176,135": "deadMountains",
+    "176,136": "deadMountains",
+    "175,137": "deadMountains",
+    "175,138": "deadMountains",
+    "174,139": "deadMountains",
+    "174,140": "deadMountains",
+    "174,141": "deadMountains",
+    "173,141": "deadMountains",
+    "173,142": "deadMountains",
+    "172,143": "deadMountains",
+    "172,144": "deadMountains",
+    "171,145": "deadMountains",
+    "171,146": "deadMountains",
+    "170,147": "deadMountains"
+  },
+  "hubs": [],
+  "outposts": [],
+  "cities": []
+}

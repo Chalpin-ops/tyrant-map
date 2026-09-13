@@ -23,10 +23,6 @@ html,body{height:100%;overflow:hidden;background:#0d1020;font-family:-apple-syst
 .tool-btn:hover{background:#252c42;border-color:#5060a0}
 .tool-btn.active{background:#2a4080;color:#90b8ff;border-color:#4a70d0}
 .tool-btn.danger{background:#3a1818;color:#ff8888;border-color:#6a2828}
-#t-pick{
-  font-size:11px;padding:4px 6px;border:1px solid #3a4060;border-radius:6px;
-  background:#1e2438;color:#c8d0e8;cursor:pointer;
-}
 
 /* ── Legend ── */
 #legend{
@@ -56,39 +52,94 @@ canvas{display:block}
   padding:5px 10px;background:#12151f;border-top:1px solid #2a3050;
   font-size:11px;color:#6070a0;min-height:26px;flex-shrink:0;
 }
+
+/* ── Label dialog (replaces window.prompt, which some embedded browsers block) ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(5,7,15,0.6);
+  display:none;align-items:center;justify-content:center;z-index:50;
+}
+.modal-box{
+  background:#161b2c;border:1px solid #3a4060;border-radius:10px;
+  padding:16px;min-width:220px;box-shadow:0 12px 32px rgba(0,0,0,0.5);
+}
+.modal-title{font-size:12px;color:#a0b0d8;margin-bottom:8px;}
+.modal-box input{
+  width:100%;font-size:14px;padding:7px 9px;border-radius:6px;
+  border:1px solid #3a4060;background:#0d1020;color:#e0e8ff;
+}
+.modal-color-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#a0b0d8;}
+.modal-color-row input[type=color]{
+  width:36px;height:26px;padding:0;border:1px solid #3a4060;border-radius:6px;
+  background:#0d1020;cursor:pointer;
+}
+.modal-actions{display:flex;gap:6px;margin-top:12px;justify-content:flex-end;}
+
+/* ── Terrain palette (design mode only) ── */
+#toolbar{position:relative}
+#terrain-palette{
+  display:none; position:absolute; top:100%; left:8px; margin-top:4px;
+  width:290px; max-height:min(60vh, 480px); overflow-y:auto;
+  background:#12151f; border:1px solid #3a4060; border-radius:8px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.55); padding:10px; z-index:30;
+}
+.palette-search{
+  width:100%; font-size:12px; padding:6px 8px; border-radius:6px;
+  border:1px solid #3a4060; background:#0d1020; color:#e0e8ff; margin-bottom:8px;
+}
+.palette-zone-title{
+  font-size:11px; font-weight:700; color:#8090b8; text-transform:uppercase;
+  letter-spacing:0.04em; margin:10px 0 4px;
+}
+.palette-zone-title:first-child{margin-top:0}
+.palette-group-title{font-size:10px; color:#6070a0; margin:6px 0 3px;}
+.palette-grid{display:grid; grid-template-columns:1fr 1fr; gap:4px;}
+.swatch{
+  display:flex; align-items:center; gap:6px; padding:4px 6px;
+  border-radius:6px; border:1px solid transparent; cursor:pointer;
+  font-size:11px; color:#c8d0e8; background:#1a1f30; user-select:none;
+}
+.swatch:hover{background:#232a42; border-color:#3a4060}
+.swatch.active{background:#2a4080; border-color:#4a70d0; color:#90b8ff}
+.swatch .sw-color{
+  width:16px; height:16px; border-radius:4px; flex-shrink:0; background-size:cover;
+  background-position:center; border:1px solid rgba(255,255,255,0.25);
+}
+.swatch .sw-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.swatch .sw-lock{margin-left:auto; font-size:9px; opacity:0.75; flex-shrink:0}
 </style>
 </head>
 <body>
 <div id="app">
 
   <div id="toolbar">
-    <button class="tool-btn active" id="btn-hub"     onclick="setTool('hub')">⬡ Hub</button>
+    <button class="tool-btn active" id="btn-pan"     onclick="setTool('pan')">🖐 Pan</button>
+    <button class="tool-btn"        id="btn-hub"     onclick="setTool('hub')">⬡ Hub</button>
     <button class="tool-btn"        id="btn-outpost" onclick="setTool('outpost')">◈ Outpost</button>
-    <button class="tool-btn"        id="btn-terrain" onclick="setTool('terrain')">⬢ Terrain</button>
+    <button class="tool-btn"        id="btn-city"    onclick="setTool('city')">🏙 City</button>
     <button class="tool-btn"        id="btn-erase"   onclick="setTool('erase')">✕ Erase</button>
-    <select id="t-pick">
-      <option value="mountain">⛰ Mountain</option>
-      <option value="snow">❄ Snow peak</option>
-      <option value="forest">🌲 Forest</option>
-      <option value="water">〰 Water</option>
-      <option value="lava">🔥 Lava</option>
-    </select>
+    <!-- Design-only controls (terrain painting) — hidden unless the page is opened with ?design -->
+    <button class="tool-btn"        id="btn-terrain" onclick="setTool('terrain')">⬢ Terrain</button>
+    <div id="terrain-palette">
+      <input id="terrain-search" class="palette-search" type="text" placeholder="Search terrain…" />
+      <div id="terrain-groups"><!-- populated by renderTerrainPalette() --></div>
+    </div>
     <button class="tool-btn danger" onclick="clearAll()">✕ Clear</button>
     <button class="tool-btn"        onclick="exportJSON()">↓ Export</button>
     <button class="tool-btn"        onclick="importJSON()">↑ Import</button>
+    <!-- Design-only: downloads default.json — move it into map-data/ and commit
+         it so index.html (in any mode) auto-loads this terrain from then on. -->
+    <button class="tool-btn"        id="btn-save-default" onclick="saveDefaultMap()">💾 Save Default Map</button>
   </div>
 
   <div id="legend">
     <span class="leg"><span class="ls" style="background:#1e3a5f;border:1px solid #3a6090"></span>Sanctuary</span>
     <span class="leg"><span class="ls" style="background:#1a3a1a;border:1px solid #3a703a"></span>Midlands</span>
-    <span class="leg"><span class="ls" style="background:#3a2a12;border:1px solid #7a5a24"></span>Core</span>
-    <span class="leg"><span class="ls" style="background:#3a2a1a"></span>Mountain</span>
-    <span class="leg"><span class="ls" style="background:#c8e0f8;border:1px solid #a0c8e8"></span>Snow</span>
-    <span class="leg"><span class="ls" style="background:#143a14"></span>Forest</span>
-    <span class="leg"><span class="ls" style="background:#0a2a4a"></span>Water</span>
-    <span class="leg"><span class="ls" style="background:#5a1a00"></span>Lava</span>
-    <span class="leg"><span class="ls" style="background:#4a7aff;opacity:0.6"></span>Hub territory</span>
-    <span class="leg"><span class="ls" style="background:#ffa040;opacity:0.6"></span>Outpost territory</span>
+    <span class="leg"><span class="ls" style="background:#57554f;border:1px solid #7c786f"></span>Core</span>
+    <span class="leg"><span class="ls" style="background:#4a7aff;opacity:0.6"></span>Hub territory (default colour)</span>
+    <span class="leg"><span class="ls" style="background:#ffa040;opacity:0.6"></span>Outpost territory (default colour)</span>
+    <span class="leg"><span class="ls" style="background:#d4a017;border:1px solid #ffe08a"></span>City (default colour)</span>
+    <span class="leg">Impassable terrain (🚫 in the Terrain palette) blocks Hub/Outpost/City placement</span>
+    <span class="leg">Click a placed marker to rename/recolour it</span>
   </div>
 
   <div id="cw">
@@ -96,51 +147,136 @@ canvas{display:block}
     <div id="tip"></div>
   </div>
 
-  <div id="info">Pan: drag · Zoom: scroll or pinch · Click hex to place</div>
+  <div id="info"></div>
+
+  <div id="label-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div id="label-modal-title" class="modal-title">Label</div>
+      <input id="label-modal-input" type="text" maxlength="40" autocomplete="off" />
+      <div class="modal-color-row">
+        <label for="label-modal-color">Colour</label>
+        <input id="label-modal-color" type="color" />
+      </div>
+      <div class="modal-actions">
+        <button id="label-modal-cancel" class="tool-btn">Cancel</button>
+        <button id="label-modal-ok" class="tool-btn active">Save</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════
 // CONFIGURATION — edit these values freely
 // ═══════════════════════════════════════════════
-const GRID    = 259;   // map is 259×259 hexes
-const CX      = 129;   // centre column
-const CY      = 129;   // centre row
-const SANCT_R = 40;    // Sanctuary radius in hexes
-const MID_R   = 100;   // Midlands radius in hexes
+const GRID    = 250;   // map is 250×250 hexes, columns/rows 0-249
+const CX      = 125;   // centre column
+const CY      = 125;   // centre row
+const CORE_R  = 56;    // Core radius in hexes
+const MID_R   = 105;   // Midlands outer radius in hexes
 const HUB_R   = 11;    // Guild hub territory radius
 const OUT_R   = 6;     // Outpost territory radius
 
-// Zone base colours (fill / border)
+// Default marker colours — overridden per-marker via the rename/recolour
+// dialog (click a placed marker without dragging it), e.g. to colour-code
+// a "war map" by owning guild/alliance.
+const MARKER_DEFAULTS = { hub: '#2a5aff', outpost: '#e07800', city: '#d4a017' };
+
+// Zone base colours (fill / border) — Core innermost, Sanctuary outermost
 const RING = {
-  fill:   ['#1e3a5f', '#1a3a1a', '#3a2a12'],
-  stroke: ['#2a5080', '#2a5a2a', '#6a4a1a'],
-  label:  ['Sanctuary', 'Midlands', 'Core'],
+  fill:   ['#57554f', '#1a3a1a', '#1e3a5f'],
+  stroke: ['#7c786f', '#2a5a2a', '#2a5080'],
+  label:  ['Core', 'Midlands', 'Sanctuary'],
 };
 
 // ── Terrain types ──────────────────────────────
 // To add an image, set img to a path relative to index.html,
-// e.g.  img: 'assets/mountain.png'
+// e.g.  img: 'assets/deadlands.png'
 // Leave img as null (or remove it) to use the fill colour instead.
+// `block: true` means Hub/Outpost/City cannot be placed or dragged onto that terrain.
 const TERRAIN = {
-  mountain: { fill: '#3a2a1a', stroke: '#5a4030', label: 'Mountain', img: null },
-  snow:     { fill: '#d8eeff', stroke: '#a0c8e8', label: 'Snow peak', img: null },
-  forest:   { fill: '#143a14', stroke: '#245a24', label: 'Forest',    img: null },
-  water:    { fill: '#0a2a4a', stroke: '#1a4a6a', label: 'Water',     img: null },
-  lava:     { fill: '#5a1a00', stroke: '#cc4400', label: 'Lava',      img: null },
+  // ── Core tiles (ash / lava wasteland) ──
+  deadlands:      { fill: '#4a4842', stroke: '#6c6960', label: 'Deadlands',       img: 'assets/deadlands.png',      block: false },
+  deadRocks:      { fill: '#57534d', stroke: '#78726a', label: 'Dead Rocks',      img: 'assets/deadRocks.png',      block: false },
+  smallLavaPits:  { fill: '#4a3428', stroke: '#a04e20', label: 'Small Lava Pits', img: 'assets/smallLavaPits.png',  block: false },
+  volcano:        { fill: '#3a2420', stroke: '#ff5a1a', label: 'Volcano',         img: 'assets/volcano.png',        block: true  },
+  lavaField:      { fill: '#5a2010', stroke: '#ff6a20', label: 'Lava Field',      img: 'assets/lavaField.png',      block: true  },
+  lavaPool:       { fill: '#6a1e0a', stroke: '#ffae40', label: 'Lava Pool',       img: 'assets/lavaPool.png',       block: true  },
+  deadForest:     { fill: '#3a3a36', stroke: '#5a5a52', label: 'Dead Forest',     img: 'assets/deadForest.png',     block: false },
+  burningForest:  { fill: '#4a2818', stroke: '#ff7020', label: 'Burning Forest',  img: 'assets/burningForest.png',  block: false },
+  rockPillars:    { fill: '#5c5850', stroke: '#85806f', label: 'Rock Pillars',    img: 'assets/rockPillars.png',    block: false },
+  deadMountains:  { fill: '#45423e', stroke: '#6f6a62', label: 'Dead Mountains',  img: 'assets/deadMountains.png',  block: true  },
+
+  // ── Midlands tiles (green / desert / snow) ──
+  mountains:        { fill: '#4a4038', stroke: '#6f6255', label: 'Mountains',         img: 'assets/mountains.png',        block: true  },
+  forest:           { fill: '#1e5c1e', stroke: '#2e7a2e', label: 'Forest',            img: 'assets/forest.png',           block: false },
+  plains:           { fill: '#6a9a3a', stroke: '#86b854', label: 'Plains',            img: 'assets/plains.png',           block: false },
+  river:            { fill: '#2a6a9a', stroke: '#4a8aba', label: 'River',             img: 'assets/river.png',            block: true  },
+  desert:           { fill: '#c2a25a', stroke: '#d8bc7a', label: 'Desert',            img: 'assets/desert.png',           block: false },
+  desertOasis:      { fill: '#3a8a6a', stroke: '#5adcb0', label: 'Desert Oasis',      img: 'assets/desertOasis.png',      block: false },
+  desertPebbles:    { fill: '#b09468', stroke: '#cbb488', label: 'Desert Pebbles',    img: 'assets/desertPebbles.png',    block: false },
+  desertMountains:  { fill: '#8a6a3a', stroke: '#a68850', label: 'Desert Mountains',  img: 'assets/desertMountains.png',  block: true  },
+  snowyPlains:      { fill: '#e8f2fa', stroke: '#c8dcf0', label: 'Snowy Plains',      img: 'assets/snowyPlains.png',      block: false },
+  snowyForest:      { fill: '#cfe8e0', stroke: '#a8d0c8', label: 'Snowy Forest',      img: 'assets/snowyForest.png',      block: false },
+  snowyRocks:       { fill: '#d8e0e8', stroke: '#b0c0cc', label: 'Snowy Rocks',       img: 'assets/snowyRocks.png',       block: false },
+  frozenRiver:      { fill: '#b8e0f0', stroke: '#d8f0fa', label: 'Frozen River',      img: 'assets/frozenRiver.png',      block: true  },
+  frozenPond:       { fill: '#a8d8ec', stroke: '#cceaf5', label: 'Frozen Pond',       img: 'assets/frozenPond.png',       block: false },
 };
+
+// Organizes TERRAIN into the categorized swatch grid the design-mode
+// "Terrain" palette shows — purely a UI grouping, doesn't affect rendering.
+const TERRAIN_GROUPS = [
+  { zone: 'Core', groups: [
+    { name: 'Ash & Rock',      keys: ['deadlands', 'deadRocks', 'rockPillars', 'deadMountains'] },
+    { name: 'Lava',            keys: ['smallLavaPits', 'volcano', 'lavaField', 'lavaPool'] },
+    { name: 'Dead Vegetation', keys: ['deadForest', 'burningForest'] },
+  ]},
+  { zone: 'Midlands', groups: [
+    { name: 'Green',      keys: ['forest', 'plains'] },
+    { name: 'Mountains',  keys: ['mountains'] },
+    { name: 'Water',      keys: ['river'] },
+    { name: 'Desert',     keys: ['desert', 'desertOasis', 'desertPebbles', 'desertMountains'] },
+    { name: 'Snow & Ice', keys: ['snowyPlains', 'snowyForest', 'snowyRocks', 'frozenRiver', 'frozenPond'] },
+  ]},
+];
 // ═══════════════════════════════════════════════
+
+// Design mode unlocks terrain painting and a full clear. Open the page as
+// index.html?design to author the map; share plain index.html (no query
+// string) with guildmates so the terrain layer is locked and read-only.
+const DESIGN_MODE = new URLSearchParams(location.search).has('design');
 
 // ── State ──────────────────────────────────────
 let S = {
-  terrain:  {},   // { "col,row": "mountain"|"snow"|... }
+  terrain:  {},   // { "col,row": "deadlands"|"forest"|... }
   hubs:     [],   // [{ col, row, label }]
   outposts: [],   // [{ col, row, label }]
-  tool:     'hub',
-  ttype:    'mountain',
+  cities:   [],   // [{ col, row, label }]
+  tool:     'pan',
+  ttype:    'deadlands',
   pan:      { x: 0, y: 0 },
   zoom:     2.5,
 };
+
+// Loads map-data/default.json (the repo's committed baseline map) at boot, in
+// any mode. This is what "Save Default Map" (design mode) writes — replace
+// that file and commit it so everyone opening this page picks up the change.
+// Requires being served over http(s) (a local server or GitHub Pages); fetch
+// of a local file:// path is blocked by the browser, same as terrain images —
+// see the README. Silently leaves an empty map if it's missing or blocked.
+async function loadDefaultMap() {
+  try {
+    const res = await fetch('map-data/default.json');
+    if (!res.ok) return;
+    const d = await res.json();
+    if (d.terrain)  S.terrain  = d.terrain;
+    if (d.hubs)     S.hubs     = d.hubs;
+    if (d.outposts) S.outposts = d.outposts;
+    if (d.cities)   S.cities   = d.cities;
+  } catch (e) {
+    console.warn('Could not load map-data/default.json (needs a local server or GitHub Pages — see README):', e);
+  }
+}
 
 // Pre-loaded Image objects keyed by terrain type
 const IMGS = {};
@@ -152,29 +288,72 @@ const cw     = document.getElementById('cw');
 const tip    = document.getElementById('tip');
 const infoEl = document.getElementById('info');
 
-// ── Hex math ───────────────────────────────────
+// ── Marker info dialog (label + colour) ────────
+// A custom inline input replaces window.prompt(), which some embedded/
+// sandboxed browser contexts (including this app's own preview pane) block
+// outright — calling it there throws and silently kills the click handler,
+// making every Hub/Outpost/City placement look unresponsive. Also doubles as
+// the rename/recolour dialog for an existing marker (click it without
+// dragging) — handy for building a colour-coded "war map" of who owns what.
+const labelModal       = document.getElementById('label-modal');
+const labelModalTitle  = document.getElementById('label-modal-title');
+const labelModalInput  = document.getElementById('label-modal-input');
+const labelModalColor  = document.getElementById('label-modal-color');
+const labelModalOk     = document.getElementById('label-modal-ok');
+const labelModalCancel = document.getElementById('label-modal-cancel');
+let labelModalResolve  = null;
+
+function askMarkerInfo(title, defaultLabel, defaultColor) {
+  return new Promise(resolve => {
+    labelModalResolve = resolve;
+    labelModalTitle.textContent = title;
+    labelModalInput.value = defaultLabel;
+    labelModalColor.value = defaultColor;
+    labelModal.style.display = 'flex';
+    labelModalInput.focus();
+    labelModalInput.select();
+  });
+}
+function closeLabelModal(result) {
+  labelModal.style.display = 'none';
+  const resolve = labelModalResolve;
+  labelModalResolve = null;
+  if (resolve) resolve(result);
+}
+function currentMarkerInfo() {
+  return { label: labelModalInput.value, color: labelModalColor.value };
+}
+labelModalOk.addEventListener('click', () => closeLabelModal(currentMarkerInfo()));
+labelModalCancel.addEventListener('click', () => closeLabelModal(null));
+labelModalInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') closeLabelModal(currentMarkerInfo());
+  if (e.key === 'Escape') closeLabelModal(null);
+});
+labelModal.addEventListener('mousedown', e => { if (e.target === labelModal) closeLabelModal(null); });
+
+// ── Hex math (pointy-top hexes, row-offset grid) ──
 const hs  = () => S.zoom * 7;            // hex "radius" in px
-const hw  = () => hs() * 2;              // hex width
-const hh  = () => Math.sqrt(3) * hs();   // hex height
+const hw  = () => Math.sqrt(3) * hs();   // hex width
+const hh  = () => hs() * 2;              // hex height
 
 function h2p(col, row) {
   return {
-    x: (col - CX) * hw() * 0.75 + canvas.width  / 2 + S.pan.x,
-    y: (row - CY) * hh() + (col % 2 === 0 ? 0 : hh() / 2) + canvas.height / 2 + S.pan.y,
+    x: (col - CX) * hw() + (row % 2 === 0 ? 0 : hw() / 2) + canvas.width  / 2 + S.pan.x,
+    y: (row - CY) * hh() * 0.75 + canvas.height / 2 + S.pan.y,
   };
 }
 
 function p2h(px, py) {
-  const col = Math.round((px - canvas.width  / 2 - S.pan.x) / (hw() * 0.75) + CX);
-  const off = col % 2 === 0 ? 0 : hh() / 2;
-  const row = Math.round((py - canvas.height / 2 - S.pan.y - off) / hh() + CY);
+  const row = Math.round((py - canvas.height / 2 - S.pan.y) / (hh() * 0.75) + CY);
+  const off = row % 2 === 0 ? 0 : hw() / 2;
+  const col = Math.round((px - canvas.width  / 2 - S.pan.x - off) / hw() + CX);
   return { col, row };
 }
 
-// Offset-coord hex distance (odd-q)
+// Offset-coord hex distance (odd-r) — matches the pointy-top row-offset layout above
 function hdist(c1, r1, c2, r2) {
   function o2c(col, row) {
-    const x = col, z = row - (col - (col & 1)) / 2, y = -x - z;
+    const x = col - (row - (row & 1)) / 2, z = row, y = -x - z;
     return { x, y, z };
   }
   const a = o2c(c1, r1), b = o2c(c2, r2);
@@ -183,40 +362,56 @@ function hdist(c1, r1, c2, r2) {
 
 function ring(c, r) {
   const d = hdist(c, r, CX, CY);
-  return d <= SANCT_R ? 0 : d <= MID_R ? 1 : 2;
+  return d <= CORE_R ? 0 : d <= MID_R ? 1 : 2;
 }
 
 // ── Drawing helpers ────────────────────────────
-function hexPath(x, y, s) {
-  ctx.beginPath();
+function hexPath(x, y, s, c = ctx) {
+  c.beginPath();
   for (let i = 0; i < 6; i++) {
     const a = Math.PI / 3 * i - Math.PI / 6;
-    i ? ctx.lineTo(x + s * Math.cos(a), y + s * Math.sin(a))
-      : ctx.moveTo(x + s * Math.cos(a), y + s * Math.sin(a));
+    i ? c.lineTo(x + s * Math.cos(a), y + s * Math.sin(a))
+      : c.moveTo(x + s * Math.cos(a), y + s * Math.sin(a));
   }
-  ctx.closePath();
+  c.closePath();
 }
 
-function drawHex(col, row, fill, stroke, lw = 0.8) {
-  const { x, y } = h2p(col, row);
-  const s = hs();
-  hexPath(x, y, s);
-  ctx.fillStyle = fill; ctx.fill();
-  ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke();
-}
+// ── Tile cache (perf) ───────────────────────────
+// Panning/zooming used to re-run fill+clip+drawImage+stroke for every visible
+// hex on every frame, which is what made scrolling laggy. Instead, each
+// distinct (terrain-or-zone, zoom-size) combination is rendered once to a
+// small offscreen canvas, and the main render just blits that cached bitmap.
+const tileCache = {};
+function getCachedTile(kind, fillColor, strokeColor, s) {
+  const key = kind + '@' + Math.round(s);
+  const cached = tileCache[key];
+  if (cached) return cached;
 
-function drawHexImage(col, row, img, stroke, lw = 0.8) {
-  const { x, y } = h2p(col, row);
-  const s = hs();
-  hexPath(x, y, s);
-  ctx.save();
-  ctx.clip();
-  // draw image centred on the hex, sized to cover it
-  ctx.drawImage(img, x - s, y - s, s * 2, s * 2);
-  ctx.restore();
-  // border on top
-  hexPath(x, y, s);
-  ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke();
+  if (Object.keys(tileCache).length > 400) {
+    for (const k in tileCache) delete tileCache[k]; // bound memory during long zoom gestures
+  }
+
+  const size = Math.ceil(s * 2) + 4;
+  const off  = document.createElement('canvas');
+  off.width = off.height = size;
+  const octx = off.getContext('2d');
+  const cx = size / 2, cy = size / 2;
+
+  const img = IMGS[kind];
+  hexPath(cx, cy, s, octx);
+  if (img) {
+    octx.save(); octx.clip();
+    octx.drawImage(img, cx - s, cy - s, s * 2, s * 2);
+    octx.restore();
+    hexPath(cx, cy, s, octx); // re-trace so the border draws crisp on top of the image
+  } else {
+    octx.fillStyle = fillColor; octx.fill();
+  }
+  octx.strokeStyle = strokeColor; octx.lineWidth = 0.8; octx.stroke();
+
+  const tile = { canvas: off, size };
+  tileCache[key] = tile;
+  return tile;
 }
 
 function drawTerritory(col, row, radius, fillColor) {
@@ -242,55 +437,54 @@ function render() {
   ctx.fillStyle = '#0d1020';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  const s = hs();
   const pad  = 3;
-  const cMin = Math.max(0,      Math.floor((0             - canvas.width  / 2 - S.pan.x) / (hw() * 0.75) + CX - pad));
-  const cMax = Math.min(GRID-1, Math.ceil((canvas.width   - canvas.width  / 2 - S.pan.x) / (hw() * 0.75) + CX + pad));
+  const rMin = Math.max(0,      Math.floor((0             - canvas.height / 2 - S.pan.y) / (hh() * 0.75) + CY - pad));
+  const rMax = Math.min(GRID-1, Math.ceil((canvas.height  - canvas.height / 2 - S.pan.y) / (hh() * 0.75) + CY + pad));
 
-  // Draw base hexes
-  for (let col = cMin; col <= cMax; col++) {
-    const off  = col % 2 === 0 ? 0 : hh() / 2;
-    const rMin = Math.max(0,      Math.floor((0              - canvas.height / 2 - S.pan.y - off) / hh() + CY - pad));
-    const rMax = Math.min(GRID-1, Math.ceil((canvas.height   - canvas.height / 2 - S.pan.y - off) / hh() + CY + pad));
+  // Draw base hexes (cached bitmaps — see getCachedTile)
+  for (let row = rMin; row <= rMax; row++) {
+    const off  = row % 2 === 0 ? 0 : hw() / 2;
+    const cMin = Math.max(0,      Math.floor((0             - canvas.width  / 2 - S.pan.x - off) / hw() + CX - pad));
+    const cMax = Math.min(GRID-1, Math.ceil((canvas.width   - canvas.width  / 2 - S.pan.x - off) / hw() + CX + pad));
 
-    for (let row = rMin; row <= rMax; row++) {
+    for (let col = cMin; col <= cMax; col++) {
       const rng = ring(col, row);
       const key = `${col},${row}`;
       const ttype = S.terrain[key];
+      const hasType   = ttype && TERRAIN[ttype];
+      const kind      = hasType ? ttype : 'zone' + rng;
+      const fillColor = hasType ? TERRAIN[ttype].fill   : RING.fill[rng];
+      const strokeColor = hasType ? TERRAIN[ttype].stroke : RING.stroke[rng];
 
-      if (ttype && IMGS[ttype]) {
-        // Image tile — clip to hex and stamp
-        drawHexImage(col, row, IMGS[ttype], TERRAIN[ttype].stroke);
-      } else if (ttype && TERRAIN[ttype]) {
-        // Colour fallback when no image loaded
-        drawHex(col, row, TERRAIN[ttype].fill, TERRAIN[ttype].stroke);
-      } else {
-        // Plain zone colour
-        drawHex(col, row, RING.fill[rng], RING.stroke[rng]);
-      }
+      const tile = getCachedTile(kind, fillColor, strokeColor, s);
+      const { x, y } = h2p(col, row);
+      ctx.drawImage(tile.canvas, x - tile.size / 2, y - tile.size / 2);
     }
   }
 
-  // Territory overlays
+  // Territory overlays — tinted per-marker so a colour-coded "war map" shows
+  // overlapping claims clearly (see MARKER_DEFAULTS / the rename dialog)
   ctx.globalAlpha = 0.28;
-  S.hubs    .forEach(h => drawTerritory(h.col, h.row, HUB_R, '#4a7aff'));
-  S.outposts.forEach(o => drawTerritory(o.col, o.row, OUT_R, '#ffa040'));
+  S.hubs    .forEach(h => drawTerritory(h.col, h.row, HUB_R, h.color || MARKER_DEFAULTS.hub));
+  S.outposts.forEach(o => drawTerritory(o.col, o.row, OUT_R, o.color || MARKER_DEFAULTS.outpost));
   ctx.globalAlpha = 1;
 
-  // Hub and outpost icons (only when zoomed in enough)
-  const s = hs();
+  // Hub, outpost and city icons (only when zoomed in enough)
   if (s > 5) {
     S.hubs.forEach(h => {
       const { x, y } = h2p(h.col, h.row);
       const r = Math.min(s * 0.55, 14);
+      const color = h.color || MARKER_DEFAULTS.hub;
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fillStyle = '#2a5aff'; ctx.fill();
-      ctx.strokeStyle = '#90b8ff'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
       ctx.fillStyle = '#fff';
       ctx.font = `bold ${Math.max(8, Math.min(s * 0.45, 11))}px sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('H', x, y);
       if (h.label && s > 6) {
-        ctx.fillStyle = '#90c0ff';
+        ctx.fillStyle = color;
         ctx.font = `${Math.max(7, Math.min(s * 0.38, 10))}px sans-serif`;
         ctx.textBaseline = 'top';
         ctx.fillText(h.label, x, y + r + 2);
@@ -300,32 +494,55 @@ function render() {
     S.outposts.forEach(o => {
       const { x, y } = h2p(o.col, o.row);
       const ss = Math.min(s * 0.45, 12);
+      const color = o.color || MARKER_DEFAULTS.outpost;
       ctx.beginPath();
       ctx.moveTo(x, y - ss); ctx.lineTo(x + ss, y + ss * 0.7); ctx.lineTo(x - ss, y + ss * 0.7);
       ctx.closePath();
-      ctx.fillStyle = '#e07800'; ctx.fill();
-      ctx.strokeStyle = '#ffb850'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
       if (o.label && s > 6) {
-        ctx.fillStyle = '#ffb850';
+        ctx.fillStyle = color;
         ctx.font = `${Math.max(7, Math.min(s * 0.38, 10))}px sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.fillText(o.label, x, y + ss * 0.8 + 2);
       }
     });
+
+    S.cities.forEach(c => {
+      const { x, y } = h2p(c.col, c.row);
+      const r = Math.min(s * 0.5, 13);
+      const color = c.color || MARKER_DEFAULTS.city;
+      ctx.beginPath();
+      ctx.moveTo(x, y - r); ctx.lineTo(x + r, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r, y);
+      ctx.closePath();
+      ctx.fillStyle = color; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.font = `bold ${Math.max(8, Math.min(s * 0.4, 10))}px sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('C', x, y);
+      if (c.label && s > 6) {
+        ctx.fillStyle = color;
+        ctx.font = `${Math.max(7, Math.min(s * 0.38, 10))}px sans-serif`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(c.label, x, y + r + 2);
+      }
+    });
   }
 
   // Ring boundary lines
-  drawRingEdge(SANCT_R, '#3a70b0', 1.8);
-  drawRingEdge(MID_R,   '#3a7a3a', 1.8);
+  drawRingEdge(CORE_R, '#8c8880', 1.8);
+  drawRingEdge(MID_R,  '#3a7a3a', 1.8);
 
-  // Zone labels at high zoom
+  // Zone labels at high zoom — positioned inside their own ring
   if (s > 9) {
     ctx.textAlign = 'center';
     [
-      { r: SANCT_R, label: 'SANCTUARY', color: 'rgba(58,96,160,0.7)' },
-      { r: MID_R,   label: 'MIDLANDS',  color: 'rgba(58,122,58,0.7)' },
+      { r: CORE_R * 0.5,         label: 'CORE',      color: 'rgba(150,148,140,0.8)' },
+      { r: (CORE_R + MID_R) / 2, label: 'MIDLANDS',  color: 'rgba(58,122,58,0.7)' },
+      { r: MID_R + 15,           label: 'SANCTUARY', color: 'rgba(58,96,160,0.7)' },
     ].forEach(({ r, label, color }) => {
-      const { x, y } = h2p(CX, CY - r - 5);
+      const { x, y } = h2p(CX, CY - r);
       ctx.fillStyle = color;
       ctx.font = 'bold 11px sans-serif';
       ctx.fillText(label, x, y);
@@ -336,14 +553,14 @@ function render() {
 function drawRingEdge(r, color, lw) {
   const s = hs();
   const pad  = 3;
-  const cMin = Math.max(0,      Math.floor((0            - canvas.width  / 2 - S.pan.x) / (hw() * 0.75) + CX - pad));
-  const cMax = Math.min(GRID-1, Math.ceil((canvas.width  - canvas.width  / 2 - S.pan.x) / (hw() * 0.75) + CX + pad));
+  const rMin = Math.max(0,      Math.floor((0            - canvas.height / 2 - S.pan.y) / (hh() * 0.75) + CY - pad));
+  const rMax = Math.min(GRID-1, Math.ceil((canvas.height - canvas.height / 2 - S.pan.y) / (hh() * 0.75) + CY + pad));
   ctx.strokeStyle = color; ctx.lineWidth = lw;
-  for (let col = cMin; col <= cMax; col++) {
-    const off  = col % 2 === 0 ? 0 : hh() / 2;
-    const rMin = Math.max(0,      Math.floor((0            - canvas.height / 2 - S.pan.y - off) / hh() + CY - pad));
-    const rMax = Math.min(GRID-1, Math.ceil((canvas.height - canvas.height / 2 - S.pan.y - off) / hh() + CY + pad));
-    for (let row = rMin; row <= rMax; row++) {
+  for (let row = rMin; row <= rMax; row++) {
+    const off  = row % 2 === 0 ? 0 : hw() / 2;
+    const cMin = Math.max(0,      Math.floor((0            - canvas.width  / 2 - S.pan.x - off) / hw() + CX - pad));
+    const cMax = Math.min(GRID-1, Math.ceil((canvas.width  - canvas.width  / 2 - S.pan.x - off) / hw() + CX + pad));
+    for (let col = cMin; col <= cMax; col++) {
       if (hdist(col, row, CX, CY) === r) {
         const { x, y } = h2p(col, row);
         hexPath(x, y, s); ctx.stroke();
@@ -355,36 +572,102 @@ function drawRingEdge(r, color, lw) {
 // ── Tool & interaction ─────────────────────────
 function setTool(t) {
   S.tool = t;
-  ['hub', 'outpost', 'terrain', 'erase'].forEach(id => {
+  ['pan', 'hub', 'outpost', 'city', 'terrain', 'erase'].forEach(id => {
     document.getElementById('btn-' + id)?.classList.toggle('active', id === t);
   });
+  document.getElementById('terrain-palette').style.display = (t === 'terrain' && DESIGN_MODE) ? 'block' : 'none';
 }
 
-function handleClick(col, row) {
+// Terrain a Hub/Outpost/City may not be placed or dragged onto (see TERRAIN[type].block)
+function blockingLabel(col, row) {
+  const t = S.terrain[`${col},${row}`];
+  return (t && TERRAIN[t] && TERRAIN[t].block) ? TERRAIN[t].label : null;
+}
+
+function canPlace(col, row) {
+  return !blockingLabel(col, row);
+}
+
+// Finds the Hub/Outpost/City sitting at (col,row), if any — used to pick a
+// marker up for dragging regardless of which placement tool is active.
+function markerAt(col, row) {
+  let idx = S.hubs.findIndex(m => m.col === col && m.row === row);
+  if (idx > -1) return { list: S.hubs, idx, type: 'hub' };
+  idx = S.outposts.findIndex(m => m.col === col && m.row === row);
+  if (idx > -1) return { list: S.outposts, idx, type: 'outpost' };
+  idx = S.cities.findIndex(m => m.col === col && m.row === row);
+  if (idx > -1) return { list: S.cities, idx, type: 'city' };
+  return null;
+}
+
+// Opens the marker-info dialog pre-filled with an existing marker's current
+// label/colour, so clicking a placed Hub/Outpost/City (without dragging it)
+// renames and/or recolours it in place.
+async function renameMarker(hit) {
+  const m = hit.list[hit.idx];
+  const result = await askMarkerInfo(`Edit marker at (${m.col},${m.row})`, m.label, m.color || MARKER_DEFAULTS[hit.type]);
+  if (result === null) { render(); return; }
+  m.label = result.label;
+  m.color = result.color;
+  infoEl.textContent = `Updated "${m.label}".`;
+  render();
+}
+
+// Paints or erases a single hex with no label prompt — used for both a
+// plain click and each step of a paint/erase drag stroke (see the pointer
+// handlers below).
+function applyToolAt(col, row) {
   if (col < 0 || row < 0 || col >= GRID || row >= GRID) return;
   const key = `${col},${row}`;
+  if (S.tool === 'terrain' && DESIGN_MODE) {
+    S.terrain[key] = S.ttype;
+  } else if (S.tool === 'erase') {
+    if (DESIGN_MODE) delete S.terrain[key];
+    S.hubs     = S.hubs    .filter(h => !(h.col === col && h.row === row));
+    S.outposts = S.outposts.filter(o => !(o.col === col && o.row === row));
+    S.cities   = S.cities  .filter(c => !(c.col === col && c.row === row));
+  }
+}
+
+async function handleClick(col, row) {
+  if (col < 0 || row < 0 || col >= GRID || row >= GRID) return;
+
+  if (S.tool === 'pan') {
+    infoEl.textContent = `(${col},${row}) — ${RING.label[ring(col, row)]}. Select Hub / Outpost / City / Erase to edit.`;
+    return;
+  }
+
+  const key = `${col},${row}`;
   const rname = RING.label[ring(col, row)];
+  const blocker = blockingLabel(col, row);
 
   if (S.tool === 'hub') {
-    const label = prompt(`Hub label at (${col},${row}):`, 'Hub');
-    if (label === null) return;
-    S.hubs.push({ col, row, label });
-    infoEl.textContent = `Hub "${label}" placed at (${col},${row}) — ${rname}. Territory radius: ${HUB_R}.`;
+    if (blocker) { infoEl.textContent = `Can't place a Hub on ${blocker} at (${col},${row}).`; return; }
+    const info = await askMarkerInfo(`Hub at (${col},${row})`, 'Hub', MARKER_DEFAULTS.hub);
+    if (info === null) return;
+    S.hubs.push({ col, row, label: info.label, color: info.color });
+    infoEl.textContent = `Hub "${info.label}" placed at (${col},${row}) — ${rname}. Territory radius: ${HUB_R}.`;
 
   } else if (S.tool === 'outpost') {
-    const label = prompt(`Outpost label at (${col},${row}):`, 'Outpost');
-    if (label === null) return;
-    S.outposts.push({ col, row, label });
-    infoEl.textContent = `Outpost "${label}" placed at (${col},${row}) — ${rname}. Territory radius: ${OUT_R}.`;
+    if (blocker) { infoEl.textContent = `Can't place an Outpost on ${blocker} at (${col},${row}).`; return; }
+    const info = await askMarkerInfo(`Outpost at (${col},${row})`, 'Outpost', MARKER_DEFAULTS.outpost);
+    if (info === null) return;
+    S.outposts.push({ col, row, label: info.label, color: info.color });
+    infoEl.textContent = `Outpost "${info.label}" placed at (${col},${row}) — ${rname}. Territory radius: ${OUT_R}.`;
 
-  } else if (S.tool === 'terrain') {
-    S.terrain[key] = S.ttype;
+  } else if (S.tool === 'city') {
+    if (blocker) { infoEl.textContent = `Can't place a City on ${blocker} at (${col},${row}).`; return; }
+    const info = await askMarkerInfo(`City at (${col},${row})`, 'City', MARKER_DEFAULTS.city);
+    if (info === null) return;
+    S.cities.push({ col, row, label: info.label, color: info.color });
+    infoEl.textContent = `City "${info.label}" placed at (${col},${row}) — ${rname}.`;
+
+  } else if (S.tool === 'terrain' && DESIGN_MODE) {
+    applyToolAt(col, row);
     infoEl.textContent = `Painted ${TERRAIN[S.ttype].label} at (${col},${row}).`;
 
   } else if (S.tool === 'erase') {
-    delete S.terrain[key];
-    S.hubs     = S.hubs    .filter(h => !(h.col === col && h.row === row));
-    S.outposts = S.outposts.filter(o => !(o.col === col && o.row === row));
+    applyToolAt(col, row);
     infoEl.textContent = `Erased (${col},${row}).`;
   }
   render();
@@ -392,13 +675,18 @@ function handleClick(col, row) {
 
 // ── Export / import ────────────────────────────
 function clearAll() {
-  if (!confirm('Clear everything?')) return;
-  S.terrain = {}; S.hubs = []; S.outposts = [];
+  if (DESIGN_MODE) {
+    if (!confirm('Clear everything, including terrain?')) return;
+    S.terrain = {}; S.hubs = []; S.outposts = []; S.cities = [];
+  } else {
+    if (!confirm('Clear all placed Hubs, Outposts, and Cities?')) return;
+    S.hubs = []; S.outposts = []; S.cities = [];
+  }
   render();
 }
 
 function exportJSON() {
-  const data = JSON.stringify({ terrain: S.terrain, hubs: S.hubs, outposts: S.outposts }, null, 2);
+  const data = JSON.stringify({ terrain: S.terrain, hubs: S.hubs, outposts: S.outposts, cities: S.cities }, null, 2);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
   a.download = 'tyrant_map.json'; a.click();
@@ -415,6 +703,7 @@ function importJSON() {
         if (d.terrain)  S.terrain  = d.terrain;
         if (d.hubs)     S.hubs     = d.hubs;
         if (d.outposts) S.outposts = d.outposts;
+        if (d.cities)   S.cities   = d.cities;
         render();
         infoEl.textContent = 'Map imported successfully.';
       } catch (e) { alert('Invalid JSON file.'); }
@@ -422,6 +711,21 @@ function importJSON() {
     reader.readAsText(e.target.files[0]);
   };
   inp.click();
+}
+
+// Downloads the current terrain + Hub/Outpost/City markers as default.json.
+// Move the download into map-data/ (replacing the existing default.json) and
+// commit it — index.html then auto-loads it for anyone (see loadDefaultMap
+// above), so this is how the baseline map actually lives in the repo, ready
+// for you or a collaborator to open in design mode and keep editing.
+function saveDefaultMap() {
+  if (!DESIGN_MODE) return;
+  const data = JSON.stringify({ terrain: S.terrain, hubs: S.hubs, outposts: S.outposts, cities: S.cities }, null, 2);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  a.download = 'default.json';
+  a.click();
+  infoEl.textContent = 'Saved default.json — move this into map-data/ (replacing the existing file) and commit it so everyone gets this terrain automatically.';
 }
 
 // ── Image preloading ───────────────────────────
@@ -441,10 +745,77 @@ function preloadImages(cb) {
   });
 }
 
+// ── Terrain palette (design mode) ──────────────
+// Renders the categorized swatch grid for S.ttype. Swatches show a colour
+// square by default and automatically switch to an image thumbnail once
+// that terrain's PNG has loaded (see preloadImages / IMGS above) — no
+// separate wiring needed as you drop real art into assets/.
+function renderTerrainPalette(filter = '') {
+  const container = document.getElementById('terrain-groups');
+  const q = filter.trim().toLowerCase();
+  container.innerHTML = '';
+
+  TERRAIN_GROUPS.forEach(zone => {
+    const visibleGroups = zone.groups
+      .map(g => ({ ...g, keys: g.keys.filter(k => !q || TERRAIN[k].label.toLowerCase().includes(q)) }))
+      .filter(g => g.keys.length);
+    if (!visibleGroups.length) return;
+
+    const zoneTitle = document.createElement('div');
+    zoneTitle.className = 'palette-zone-title';
+    zoneTitle.textContent = zone.zone;
+    container.appendChild(zoneTitle);
+
+    visibleGroups.forEach(g => {
+      const groupTitle = document.createElement('div');
+      groupTitle.className = 'palette-group-title';
+      groupTitle.textContent = g.name;
+      container.appendChild(groupTitle);
+
+      const grid = document.createElement('div');
+      grid.className = 'palette-grid';
+      g.keys.forEach(k => {
+        const t = TERRAIN[k];
+        const sw = document.createElement('div');
+        sw.className = 'swatch' + (S.ttype === k ? ' active' : '');
+        sw.title = t.label;
+        const colorSpan = IMGS[k]
+          ? `<span class="sw-color" style="background-image:url('${t.img}')"></span>`
+          : `<span class="sw-color" style="background:${t.fill}"></span>`;
+        sw.innerHTML = `${colorSpan}<span class="sw-label">${t.label}</span>${t.block ? '<span class="sw-lock" title="Blocks placement">🚫</span>' : ''}`;
+        sw.onclick = () => {
+          S.ttype = k;
+          renderTerrainPalette(document.getElementById('terrain-search').value);
+        };
+        grid.appendChild(sw);
+      });
+      container.appendChild(grid);
+    });
+  });
+}
+
 // ── Pan / zoom input ───────────────────────────
 let drag = false, moved = false;
 let dragStart = { x: 0, y: 0 }, panOrigin = { x: 0, y: 0 };
 let pinch = null;
+let dragMarker = null; // { list, idx } — a Hub/Outpost/City currently being repositioned
+let painting = false, lastPaintKey = null; // a Terrain/Erase drag stroke in progress
+
+// Terrain (design mode) and Erase both paint/erase continuously along a
+// drag instead of requiring one click per hex.
+function isPaintTool() {
+  return (S.tool === 'terrain' && DESIGN_MODE) || S.tool === 'erase';
+}
+
+// Renders are coalesced to one per animation frame so fast mousemove/touchmove
+// streams during panning, zooming, or marker-dragging don't queue up redundant
+// full-grid redraws — this (plus the tile cache above) is the scroll-lag fix.
+let renderQueued = false;
+function requestRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; render(); });
+}
 
 function showTip(clientX, clientY) {
   const rect = cw.getBoundingClientRect();
@@ -459,20 +830,78 @@ function showTip(clientX, clientY) {
 
 // Mouse
 cw.addEventListener('mousedown', e => {
-  drag = true; moved = false;
-  dragStart  = { x: e.clientX, y: e.clientY };
-  panOrigin  = { x: S.pan.x,   y: S.pan.y   };
-  cw.classList.add('panning-active');
+  const rect = cw.getBoundingClientRect();
+  const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
+
+  if (isPaintTool()) {
+    painting = true;
+    lastPaintKey = `${col},${row}`;
+    applyToolAt(col, row);
+    render();
+    return;
+  }
+
+  const hit = markerAt(col, row);
+  if (hit) {
+    dragMarker = hit;
+    drag = false; moved = false;
+  } else {
+    drag = true; moved = false;
+    dragStart  = { x: e.clientX, y: e.clientY };
+    panOrigin  = { x: S.pan.x,   y: S.pan.y   };
+    cw.classList.add('panning-active');
+  }
 });
 window.addEventListener('mousemove', e => {
+  if (painting) {
+    const rect = cw.getBoundingClientRect();
+    const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
+    const k = `${col},${row}`;
+    if (k !== lastPaintKey) {
+      applyToolAt(col, row);
+      lastPaintKey = k;
+      requestRender();
+    }
+    return;
+  }
+  if (dragMarker) {
+    const rect = cw.getBoundingClientRect();
+    const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
+    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row)) {
+      dragMarker.list[dragMarker.idx].col = col;
+      dragMarker.list[dragMarker.idx].row = row;
+      moved = true;
+      requestRender();
+    }
+    return;
+  }
   if (!drag) { showTip(e.clientX, e.clientY); return; }
   const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
   if (Math.abs(dx) > 3 || Math.abs(dy) > 3) moved = true;
   S.pan.x = panOrigin.x + dx; S.pan.y = panOrigin.y + dy;
-  render();
+  requestRender();
 });
 window.addEventListener('mouseup', e => {
   cw.classList.remove('panning-active');
+  if (painting) {
+    painting = false;
+    lastPaintKey = null;
+    render();
+    infoEl.textContent = S.tool === 'terrain' ? `Painted ${TERRAIN[S.ttype].label}.` : 'Erased along drag.';
+    return;
+  }
+  if (dragMarker) {
+    const hit = dragMarker;
+    const m = hit.list[hit.idx];
+    dragMarker = null;
+    if (moved) {
+      infoEl.textContent = `Moved "${m.label}" to (${m.col},${m.row}).`;
+      render();
+    } else {
+      renameMarker(hit); // click without dragging = rename/recolour; renders when the dialog closes
+    }
+    return;
+  }
   if (!moved) {
     const rect = cw.getBoundingClientRect();
     const { col, row } = p2h(e.clientX - rect.left, e.clientY - rect.top);
@@ -492,10 +921,10 @@ cw.addEventListener('wheel', e => {
   S.zoom = Math.max(0.4, Math.min(40, S.zoom * factor));
   S.pan.x = mx + (S.pan.x - mx) * (S.zoom / oldZ);
   S.pan.y = my + (S.pan.y - my) * (S.zoom / oldZ);
-  render();
+  requestRender();
 }, { passive: false });
 
-// Touch — single finger pan, two-finger pinch zoom
+// Touch — single finger pan (or marker drag), two-finger pinch zoom
 function ptDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
 function ptMid(t, r) {
   return { x: (t[0].clientX + t[1].clientX) / 2 - r.left,
@@ -505,12 +934,30 @@ function ptMid(t, r) {
 cw.addEventListener('touchstart', e => {
   e.preventDefault();
   if (e.touches.length === 1) {
-    drag = true; moved = false;
-    dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    panOrigin = { x: S.pan.x, y: S.pan.y };
+    const rect = cw.getBoundingClientRect();
+    const { col, row } = p2h(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+
+    if (isPaintTool()) {
+      painting = true;
+      lastPaintKey = `${col},${row}`;
+      applyToolAt(col, row);
+      render();
+      pinch = null;
+      return;
+    }
+
+    const hit = markerAt(col, row);
+    if (hit) {
+      dragMarker = hit;
+      drag = false; moved = false;
+    } else {
+      drag = true; moved = false;
+      dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      panOrigin = { x: S.pan.x, y: S.pan.y };
+    }
     pinch = null;
   } else if (e.touches.length === 2) {
-    drag = false;
+    drag = false; dragMarker = null; painting = false; lastPaintKey = null;
     const rect = cw.getBoundingClientRect();
     pinch = { dist: ptDist(e.touches), mid: ptMid(e.touches, rect), zoom: S.zoom, pan: { ...S.pan } };
   }
@@ -527,17 +974,50 @@ cw.addEventListener('touchmove', e => {
     S.zoom  = nz;
     S.pan.x = nm.x + (pinch.pan.x - pinch.mid.x) * (nz / pinch.zoom);
     S.pan.y = nm.y + (pinch.pan.y - pinch.mid.y) * (nz / pinch.zoom);
-    render();
+    requestRender();
+  } else if (e.touches.length === 1 && painting) {
+    const rect = cw.getBoundingClientRect();
+    const { col, row } = p2h(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+    const k = `${col},${row}`;
+    if (k !== lastPaintKey) {
+      applyToolAt(col, row);
+      lastPaintKey = k;
+      requestRender();
+    }
+  } else if (e.touches.length === 1 && dragMarker) {
+    const rect = cw.getBoundingClientRect();
+    const { col, row } = p2h(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+    if (col >= 0 && row >= 0 && col < GRID && row < GRID && canPlace(col, row)) {
+      dragMarker.list[dragMarker.idx].col = col;
+      dragMarker.list[dragMarker.idx].row = row;
+      moved = true;
+      requestRender();
+    }
   } else if (e.touches.length === 1 && drag) {
     const dx = e.touches[0].clientX - dragStart.x, dy = e.touches[0].clientY - dragStart.y;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
     S.pan.x = panOrigin.x + dx; S.pan.y = panOrigin.y + dy;
-    render();
+    requestRender();
   }
 }, { passive: false });
 
 cw.addEventListener('touchend', e => {
-  if (e.touches.length === 0 && drag && !moved && e.changedTouches.length === 1) {
+  if (e.touches.length === 0 && painting) {
+    painting = false;
+    lastPaintKey = null;
+    render();
+    infoEl.textContent = S.tool === 'terrain' ? `Painted ${TERRAIN[S.ttype].label}.` : 'Erased along drag.';
+  } else if (e.touches.length === 0 && dragMarker) {
+    const hit = dragMarker;
+    const m = hit.list[hit.idx];
+    dragMarker = null;
+    if (moved) {
+      infoEl.textContent = `Moved "${m.label}" to (${m.col},${m.row}).`;
+      render();
+    } else {
+      renameMarker(hit);
+    }
+  } else if (e.touches.length === 0 && drag && !moved && e.changedTouches.length === 1) {
     const rect = cw.getBoundingClientRect();
     const { col, row } = p2h(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top);
     handleClick(col, row);
@@ -546,13 +1026,30 @@ cw.addEventListener('touchend', e => {
   if (e.touches.length === 0) drag = false;
 }, { passive: true });
 
-document.getElementById('t-pick').onchange = e => S.ttype = e.target.value;
+document.getElementById('terrain-search').addEventListener('input', e => renderTerrainPalette(e.target.value));
 
 // ── Resize ─────────────────────────────────────
 new ResizeObserver(() => render()).observe(cw);
 
 // ── Boot ───────────────────────────────────────
-preloadImages(() => render());
+// Design-only controls (terrain painting, saving the default) are hidden unless ?design is present.
+if (!DESIGN_MODE) {
+  document.getElementById('btn-terrain').style.display = 'none';
+  document.getElementById('btn-save-default').style.display = 'none';
+}
+infoEl.textContent = DESIGN_MODE
+  ? '"Pan" is selected by default — safe to look around. Pick Terrain to paint, or Hub/Outpost/City to place. Esc deselects back to Pan.'
+  : '"Pan" is selected by default — safe to look around. Pick Hub/Outpost/City to place, or drag an existing marker to move it. Esc deselects back to Pan.';
+
+// Esc is a quick "deselect" back to Pan mode, unless the label dialog is
+// the thing currently capturing input (it has its own Escape-to-cancel).
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !labelModalResolve) setTool('pan');
+});
+
+preloadImages(() => {
+  loadDefaultMap().finally(() => { renderTerrainPalette(); render(); });
+});
 </script>
 </body>
 </html>
