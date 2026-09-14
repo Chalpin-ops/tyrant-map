@@ -200,7 +200,10 @@ canvas{display:block}
     <span class="leg"><span class="ls" style="background:#4a7aff;opacity:0.6"></span>Hub territory (default colour)</span>
     <span class="leg"><span class="ls" style="background:#ffa040;opacity:0.6"></span>Outpost territory (default colour)</span>
     <span class="leg"><span class="ls" style="background:#d4a017;border:1px solid #ffe08a"></span>City (default colour)</span>
-    <span class="leg"><span class="ls" style="background:#8e44ad;opacity:0.6"></span>Dominion no-build zone (default colour)</span>
+    <span class="leg"><span class="ls" style="background:#a458c9;opacity:0.6"></span>Epic Dominion</span>
+    <span class="leg"><span class="ls" style="background:#4a7fc2;opacity:0.6"></span>Common Dominion</span>
+    <span class="leg"><span class="ls" style="background:#c9973c;opacity:0.6"></span>Frontier Dominion</span>
+    <span class="leg"><span class="ls" style="background:#8e44ad;opacity:0.6"></span>The Throne / Watchtowers</span>
     <span class="leg">Impassable terrain (🚫 in the Terrain palette) blocks Hub/Outpost/City placement</span>
     <span class="leg">Click a placed marker to rename/recolour it</span>
   </div>
@@ -270,6 +273,60 @@ const DOM_R   = 6;     // Dominion no-build radius — Hub/Outpost/City can't be
 // dialog (click a placed marker without dragging it), e.g. to colour-code
 // a "war map" by owning guild/alliance.
 const MARKER_DEFAULTS = { hub: '#2a5aff', outpost: '#e07800', city: '#d4a017', dominion: '#8e44ad' };
+
+// Dominion reward tiers, matching the in-game "Dominion Schedule" screen —
+// each tier's colour becomes that Dominion's default badge/territory
+// colour (still overridable per-marker via the rename dialog, same as any
+// other marker). The Throne and the three Watchtowers aren't tiered
+// rewards (they're the conquest mechanic, not a resource bonus), so they
+// simply have no entry here and fall back to MARKER_DEFAULTS.dominion.
+const DOMINION_TIERS = {
+  epic:     { label: 'Epic',     color: '#a458c9', eachResource: '+50,000/hr each resource while held' },
+  common:   { label: 'Common',   color: '#4a7fc2', eachResource: '+25,000/hr each resource while held' },
+  frontier: { label: 'Frontier', color: '#c9973c', eachResource: '+10,000/hr each resource while held' },
+};
+
+// Per-Dominion tier + buff, keyed by label — this is fixed game data about
+// what a Dominion *is*, not something that varies per placement, so it
+// lives here rather than in map-data/default.json.
+const DOMINION_INFO = {
+  'Ancient Forge':      { tier: 'epic', buff: '+12% Training Speed' },
+  'Crystal Mine':       { tier: 'epic', buff: '+12% Gathering Speed' },
+  'Iron Bastion':       { tier: 'epic', buff: '+8% Army Defense (in your territory)' },
+  'Ruined Archive':     { tier: 'epic', buff: '+12% Building Speed' },
+  'Verdant Grove':      { tier: 'epic', buff: '+20% Production Speed' },
+  'War Monument':       { tier: 'epic', buff: '+10% Army Attack (in your territory)' },
+
+  'Abandoned Mine':     { tier: 'common', buff: '+8% Gathering Speed' },
+  'Crumbling Rampart':  { tier: 'common', buff: '+4% Army Defense (in your territory)' },
+  'Fertile Sanctuary':  { tier: 'common', buff: '+15% Production Speed' },
+  'Forgotten Library':  { tier: 'common', buff: '+6% Research Speed' },
+  "Healer's Refuge":    { tier: 'common', buff: '+10% Healing Speed' },
+  'Old Barracks':       { tier: 'common', buff: '+6% Training Speed' },
+  "Stonemason's Hall":  { tier: 'common', buff: '+6% Building Speed' },
+  'Watchtower Ruins':   { tier: 'common', buff: '+4% Army Attack (in your territory)' },
+
+  'Drill Yard':         { tier: 'frontier', buff: '+3% Training Speed' },
+  'Gravel Pits':        { tier: 'frontier', buff: '+4% Gathering Speed' },
+  "Herbalist's Hut":    { tier: 'frontier', buff: '+5% Healing Speed' },
+  "Hermit's Study":     { tier: 'frontier', buff: '+3% Research Speed' },
+  'Homestead Fields':   { tier: 'frontier', buff: '+8% Production Speed' },
+  'Militia Camp':       { tier: 'frontier', buff: '+3% Training Speed' },
+  "Prospector's Claim": { tier: 'frontier', buff: '+4% Gathering Speed' },
+  'Quarry Camp':        { tier: 'frontier', buff: '+3% Building Speed' },
+  "Surveyor's Camp":    { tier: 'frontier', buff: '+3% Research Speed' },
+  'Timber Mill':        { tier: 'frontier', buff: '+3% Building Speed' },
+  'Trading Post':       { tier: 'frontier', buff: '+8% Production Speed' },
+  'Wayside Shrine':     { tier: 'frontier', buff: '+5% Healing Speed' },
+};
+
+// A Dominion's default colour: its tier colour if it's a known tiered
+// reward, otherwise the flat MARKER_DEFAULTS.dominion (The Throne,
+// Watchtowers). `d.color` from the rename dialog always wins over either.
+function dominionColor(d) {
+  const info = DOMINION_INFO[d.label];
+  return info ? DOMINION_TIERS[info.tier].color : MARKER_DEFAULTS.dominion;
+}
 
 // Zone base colours (fill / border) — Core innermost, Sanctuary outermost
 const RING = {
@@ -381,9 +438,16 @@ const IMGS = {};
 // named after the Dominion's label into assets/dominions/ and it's picked up
 // automatically, no code change needed (see "Adding Dominion icons" in the
 // README for the exact filename list). Two Dominions sharing a label (e.g.
-// the two "Abandoned Mine"s) share one file, which matches the game itself.
+// the two "Abandoned Mine"s) share one file by default, which matches the
+// game itself — except a handful of Dominions actually look different per
+// biome (the two "Abandoned Mine"s, the two "Stonemason's Hall"s) or share
+// one icon across different labels (the three named Watchtowers all use
+// the generic Watchtower art). For those, an explicit `icon` field on that
+// Dominion's map-data entry (e.g. "abandoned-mine-desert") overrides the
+// label-derived filename — set once by hand, not exposed in the UI, since
+// it only matters for a handful of Dominions total.
 // A manually-uploaded icon (the rename dialog's Icon row, stored as `d.img`,
-// a data-URL) always overrides the convention file for that one Dominion.
+// a data-URL) always overrides both of the above for that one Dominion.
 const DOM_ICON_DIR = 'assets/dominions/';
 function slugifyLabel(label) {
   return (label || '')
@@ -395,8 +459,8 @@ function slugifyLabel(label) {
 }
 function domIconSrc(d) {
   if (d.img) return d.img;
-  const slug = slugifyLabel(d.label);
-  return slug ? `${DOM_ICON_DIR}${slug}.png` : null;
+  const key = d.icon || slugifyLabel(d.label);
+  return key ? `${DOM_ICON_DIR}${key}.png` : null;
 }
 
 // Cached by resolved src (data-URL or convention file path) rather than a
@@ -456,13 +520,15 @@ const labelModalCancel     = document.getElementById('label-modal-cancel');
 let labelModalResolve  = null;
 let labelModalImg      = null; // staged icon override as a data-URL, or null for none
 let labelModalFallback = null; // read-only preview src to show when there's no override (a convention file already doing the job)
+let labelModalIconKey  = null; // explicit filename-key override (d.icon), if this marker has one — fixed regardless of what's typed in the label field
 
 // title/defaultLabel/defaultColor as before; opts.showIcon reveals the icon
 // upload row (only meaningful for Dominions, which are unique named entities
 // that can each carry their own icon — Hub/Outpost/City stay symbol-based),
 // opts.img pre-fills it when editing a marker that already has an uploaded
 // override, opts.previewFallback shows what's currently rendering (e.g. a
-// assets/dominions/<slug>.png convention file) when there's no override yet.
+// assets/dominions/<slug>.png convention file) when there's no override yet,
+// opts.iconKey carries a marker's explicit `icon` field, if set.
 function askMarkerInfo(title, defaultLabel, defaultColor, opts = {}) {
   return new Promise(resolve => {
     labelModalResolve = resolve;
@@ -471,6 +537,7 @@ function askMarkerInfo(title, defaultLabel, defaultColor, opts = {}) {
     labelModalColor.value = defaultColor;
     labelModalImg = opts.img || null;
     labelModalFallback = opts.previewFallback || null;
+    labelModalIconKey = opts.iconKey || null;
     labelModalIconRow.classList.toggle('show', !!opts.showIcon);
     labelModalIconInput.value = '';
     updateIconPreview();
@@ -499,14 +566,17 @@ function updateIconPreview() {
     labelModalIconPreview.classList.remove('show');
   }
 }
-// Shows the exact filename assets/dominions/ needs for the label currently
-// typed in the dialog — updates live as the label is edited, since renaming
-// a Dominion changes which convention file it'll look for.
+// Shows the exact filename assets/dominions/ needs. If this marker has an
+// explicit `icon` override (labelModalIconKey — set for the handful of
+// Dominions with a per-biome variant or a shared icon across labels, e.g.
+// the Watchtowers), that filename is fixed and doesn't change as the label
+// is edited. Otherwise it's derived live from the label field, since
+// renaming an ordinary Dominion changes which convention file it looks for.
 function updateIconHint() {
   if (!labelModalIconRow.classList.contains('show')) { labelModalIconHint.classList.remove('show'); return; }
-  const slug = slugifyLabel(labelModalInput.value);
-  labelModalIconHint.textContent = slug
-    ? `Auto-uses assets/dominions/${slug}.png if present. Upload above to override just this one.`
+  const key = labelModalIconKey || slugifyLabel(labelModalInput.value);
+  labelModalIconHint.textContent = key
+    ? `Auto-uses assets/dominions/${key}.png if present. Upload above to override just this one.`
     : 'Auto-uses a matching file in assets/dominions/ if present. Upload above to override just this one.';
   labelModalIconHint.classList.add('show');
 }
@@ -706,7 +776,7 @@ function render() {
   ctx.globalAlpha = 0.28;
   S.hubs     .forEach(h => drawTerritory(h.col, h.row, HUB_R, h.color || MARKER_DEFAULTS.hub));
   S.outposts .forEach(o => drawTerritory(o.col, o.row, OUT_R, o.color || MARKER_DEFAULTS.outpost));
-  S.dominions.forEach(d => drawTerritory(d.col, d.row, DOM_R, d.color || MARKER_DEFAULTS.dominion));
+  S.dominions.forEach(d => drawTerritory(d.col, d.row, DOM_R, d.color || dominionColor(d)));
   ctx.globalAlpha = 1;
 
   // Hub, outpost and city icons (only when zoomed in enough)
@@ -770,14 +840,18 @@ function render() {
 
     // Dominions get a hex-shaped badge — distinct from the circle/triangle/
     // diamond used above, and a nod to them being contested points on the
-    // hex grid itself. Each one can carry its own uploaded icon (`d.img`,
-    // set via the rename/recolour dialog) since they're unique named
-    // entities, unlike Hub/Outpost/City which stay symbol-based; falls back
-    // to the plain colour badge until an icon is set.
+    // hex grid itself. Each one can carry its own icon (see domIconSrc)
+    // since they're unique named entities, unlike Hub/Outpost/City which
+    // stay symbol-based; falls back to a plain colour badge until an icon
+    // is found. The colour itself defaults to the Dominion's reward tier
+    // (see DOMINION_TIERS/dominionColor) rather than one flat purple, so
+    // Epic/Common/Frontier are visually distinguishable at a glance — an
+    // icon still gets a coloured ring instead of a plain white one, so the
+    // tier reads even once art is in place.
     S.dominions.forEach(d => {
       const { x, y } = h2p(d.col, d.row);
       const r = Math.min(s * 0.5, 13);
-      const color = d.color || MARKER_DEFAULTS.dominion;
+      const color = d.color || dominionColor(d);
       const img = getDomImg(domIconSrc(d));
       hexPath(x, y, r);
       if (img) {
@@ -785,7 +859,7 @@ function render() {
         ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
         ctx.restore();
         hexPath(x, y, r);
-        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.stroke();
       } else {
         ctx.fillStyle = color; ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
@@ -795,10 +869,18 @@ function render() {
         ctx.fillText('D', x, y);
       }
       if (d.label && s > 6) {
+        const labelSize = Math.max(7, Math.min(s * 0.38, 10));
         ctx.fillStyle = color;
-        ctx.font = `${Math.max(7, Math.min(s * 0.38, 10))}px sans-serif`;
-        ctx.textBaseline = 'top';
+        ctx.font = `${labelSize}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
         ctx.fillText(d.label, x, y + r + 2);
+
+        const info = DOMINION_INFO[d.label];
+        if (info && s > 8) {
+          ctx.font = `${Math.max(6, Math.min(s * 0.3, 8))}px sans-serif`;
+          ctx.fillStyle = 'rgba(224,216,210,0.85)';
+          ctx.fillText(info.buff, x, y + r + 2 + labelSize + 1);
+        }
       }
     });
   }
@@ -888,6 +970,7 @@ async function renameMarker(hit) {
     showIcon: isDominion,
     img: m.img || null,
     previewFallback: isDominion ? resolvedDomIconSrc(m) : null,
+    iconKey: isDominion ? (m.icon || null) : null,
   });
   if (result === null) { render(); return; }
   m.label = result.label;

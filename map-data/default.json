@@ -2012,7 +2012,8 @@
     {
       "col": 80,
       "row": 203,
-      "label": "Abandoned Mine"
+      "label": "Abandoned Mine",
+      "icon": "abandoned-mine-desert"
     },
     {
       "col": 101,
@@ -2037,12 +2038,14 @@
     {
       "col": 170,
       "row": 47,
-      "label": "Abandoned Mine"
+      "label": "Abandoned Mine",
+      "icon": "abandoned-mine-snow"
     },
     {
       "col": 170,
       "row": 203,
-      "label": "Stonemason's Hall"
+      "label": "Stonemason's Hall",
+      "icon": "stonemasons-hall-desert"
     },
     {
       "col": 190,
@@ -2068,19 +2071,22 @@
       "col": 147,
       "row": 125,
       "label": "Eastern Watchtower",
-      "movable": true
+      "movable": true,
+      "icon": "watchtower"
     },
     {
       "col": 114,
       "row": 106,
       "label": "Northwestern Watchtower",
-      "movable": true
+      "movable": true,
+      "icon": "watchtower"
     },
     {
       "col": 114,
       "row": 144,
       "label": "Southwestern Watchtower",
-      "movable": true
+      "movable": true,
+      "icon": "watchtower"
     },
     {
       "col": 47,
@@ -2105,7 +2111,8 @@
     {
       "col": 125,
       "row": 35,
-      "label": "Stonemason's Hall"
+      "label": "Stonemason's Hall",
+      "icon": "stonemasons-hall-snow"
     },
     {
       "col": 47,

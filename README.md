@@ -107,18 +107,26 @@ So e.g. `deadRocks.png` goes in `assets/` and lights up the `deadRocks` tile aut
 
 ## Adding Dominion icons
 
-Same idea as terrain images, but the filename is derived from the Dominion's **label** instead of a fixed key, since Dominions are map data you can add to or rename yourself: lowercase the label, drop apostrophes, and replace every other run of non-letters/digits with a single hyphen. `assets/dominions/<that>.png` then lights up automatically for every Dominion with that label — no code change needed. Two Dominions sharing a label (e.g. the two "Abandoned Mine" nodes) share one file, which matches how the game itself reuses art per Dominion type.
+Same idea as terrain images: drop a correctly-named PNG into `assets/dominions/` and it lights up automatically, no code change needed. By default the filename is derived from the Dominion's **label** — lowercase it, drop apostrophes, and replace every other run of non-letters/digits with a single hyphen — so two Dominions sharing a label (e.g. the two "Fertile Sanctuary" nodes) share one file, matching how the game itself reuses art per Dominion type.
 
-The current 34 Dominions need these 30 files (some labels repeat):
+A few Dominions need to break that rule — either because same-labelled instances actually look different per biome, or because several *different* labels should share one icon. For those, that specific Dominion's entry in `map-data/default.json` carries an explicit `"icon": "<key>"` field that overrides the label-derived filename — set by hand, not through the UI, since it only applies to a handful of entries:
+
+| Filename | Label(s) | Why it's special |
+|---|---|---|
+| `abandoned-mine-desert.png` | Abandoned Mine (80, 203) | different biome per instance |
+| `abandoned-mine-snow.png` | Abandoned Mine (170, 47) | different biome per instance |
+| `stonemasons-hall-desert.png` | Stonemason's Hall (170, 203) | different biome per instance |
+| `stonemasons-hall-snow.png` | Stonemason's Hall (125, 35) | different biome per instance |
+| `watchtower.png` | Eastern/Northwestern/Southwestern Watchtower | one generic icon, three different labels |
+
+Every other Dominion just uses its plain label-derived filename:
 
 | Filename | Label(s) |
 |---|---|
-| `abandoned-mine.png` | Abandoned Mine *(×2)* |
 | `ancient-forge.png` | Ancient Forge |
 | `crumbling-rampart.png` | Crumbling Rampart |
 | `crystal-mine.png` | Crystal Mine |
 | `drill-yard.png` | Drill Yard |
-| `eastern-watchtower.png` | Eastern Watchtower |
 | `fertile-sanctuary.png` | Fertile Sanctuary *(×2)* |
 | `forgotten-library.png` | Forgotten Library |
 | `gravel-pits.png` | Gravel Pits |
@@ -128,13 +136,10 @@ The current 34 Dominions need these 30 files (some labels repeat):
 | `homestead-fields.png` | Homestead Fields |
 | `iron-bastion.png` | Iron Bastion |
 | `militia-camp.png` | Militia Camp |
-| `northwestern-watchtower.png` | Northwestern Watchtower |
 | `old-barracks.png` | Old Barracks *(×2)* |
 | `prospectors-claim.png` | Prospector's Claim |
 | `quarry-camp.png` | Quarry Camp |
 | `ruined-archive.png` | Ruined Archive |
-| `southwestern-watchtower.png` | Southwestern Watchtower |
-| `stonemasons-hall.png` | Stonemason's Hall *(×2)* |
 | `surveyors-camp.png` | Surveyor's Camp |
 | `the-throne.png` | The Throne |
 | `timber-mill.png` | Timber Mill |
@@ -144,9 +149,11 @@ The current 34 Dominions need these 30 files (some labels repeat):
 | `watchtower-ruins.png` | Watchtower Ruins |
 | `wayside-shrine.png` | Wayside Shrine |
 
-If you rename a Dominion or add a new one, the rename/recolour dialog (click a Dominion without dragging it) shows the exact filename it's currently looking for, live, under the Icon row.
+If you rename an ordinary Dominion or add a new one, the rename/recolour dialog (click a Dominion without dragging it) shows the exact filename it's currently looking for, live, under the Icon row. For a Dominion with an explicit `icon` override, that hint stays fixed on the override's filename regardless of what you type in the label field, since renaming doesn't change which file it uses.
 
-**One-off override:** that same Icon row also lets you upload an image directly for a single Dominion (downscaled and centre-cropped client-side, then stored inline on that Dominion as `img`, a data-URL). An upload always takes priority over the convention file for that one Dominion — handy for a Dominion that doesn't have official art yet, or a placeholder before you've prepared the real file.
+**One-off override:** that same Icon row also lets you upload an image directly for a single Dominion (downscaled and centre-cropped client-side, then stored inline on that Dominion as `img`, a data-URL). An upload always takes priority over both the convention file and an `icon` override, for that one Dominion only — handy for a Dominion that doesn't have official art yet, or a placeholder before you've prepared the real file.
+
+**Reward tiers:** every Dominion except The Throne and the three Watchtowers belongs to a reward tier (Epic, Common, or Frontier, matching the game's own "Dominion Schedule" screen) — `DOMINION_TIERS` and `DOMINION_INFO` near the top of `index.html`'s script hold each tier's colour and each Dominion's specific buff. A Dominion's badge, territory tint, and label default to its tier colour (still overridable per-marker via `d.color`, same as any other marker), and its buff is shown as a second line under its name once you're zoomed in enough to read it. The Throne/Watchtowers have no tier entry, so they keep the flat default Dominion colour.
 
 ## Controls
 
@@ -177,6 +184,7 @@ Dominions are contested points worth a buff — a `DOM_R` (6-tile) radius around
 - **Dragging or renaming** is design-mode only *except* for a Dominion explicitly marked `"movable": true` in its JSON — currently just the three Watchtowers — which can be dragged/renamed in either mode, so anyone can reposition them after the Throne is recaptured without needing design-mode access. Everything else (the 15 fixed Dominions + the Throne) is locked to design-mode-only editing, so an ordinary guildmate can't accidentally nudge one.
 - **Erasing one** is design-mode only, same as terrain — it's map data, not a per-guild placement.
 - **Icons** work the same way as terrain images — drop a correctly-named PNG into `assets/dominions/` and it's picked up automatically, no code change or upload needed. No icon set yet just falls back to the plain coloured hex badge with a "D". See "Adding Dominion icons" below for the exact filenames and an alternative one-off upload option.
+- **Reward tier** (Epic/Common/Frontier) drives a Dominion's default badge/territory colour and shows its buff under its name once zoomed in — see "Adding Dominion icons" below for how tiers and buffs are defined. The Throne and Watchtowers aren't tiered rewards, so they keep the flat default colour.
 
 The current known Dominions (including the Throne and the three Watchtowers, whose positions shift each time the Throne is captured) are seeded in `map-data/default.json`. To make a *new* Dominion draggable outside design mode, add `"movable": true` to its entry there.
 
