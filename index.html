@@ -205,6 +205,7 @@ const TERRAIN = {
   deadlands:      { fill: '#4a4842', stroke: '#6c6960', label: 'Deadlands',       img: 'assets/deadlands.png',      block: false },
   deadRocks:      { fill: '#57534d', stroke: '#78726a', label: 'Dead Rocks',      img: 'assets/deadRocks.png',      block: false },
   smallLavaPits:  { fill: '#4a3428', stroke: '#a04e20', label: 'Small Lava Pits', img: 'assets/smallLavaPits.png',  block: false },
+  lavaPits:       { fill: '#4e2c1c', stroke: '#c85a1a', label: 'Lava Pits',       img: 'assets/lavaPits.png',       block: false },
   volcano:        { fill: '#3a2420', stroke: '#ff5a1a', label: 'Volcano',         img: 'assets/volcano.png',        block: true  },
   lavaField:      { fill: '#5a2010', stroke: '#ff6a20', label: 'Lava Field',      img: 'assets/lavaField.png',      block: true  },
   lavaPool:       { fill: '#6a1e0a', stroke: '#ffae40', label: 'Lava Pool',       img: 'assets/lavaPool.png',       block: true  },
@@ -234,7 +235,7 @@ const TERRAIN = {
 const TERRAIN_GROUPS = [
   { zone: 'Core', groups: [
     { name: 'Ash & Rock',      keys: ['deadlands', 'deadRocks', 'rockPillars', 'deadMountains'] },
-    { name: 'Lava',            keys: ['smallLavaPits', 'volcano', 'lavaField', 'lavaPool'] },
+    { name: 'Lava',            keys: ['smallLavaPits', 'lavaPits', 'volcano', 'lavaField', 'lavaPool'] },
     { name: 'Dead Vegetation', keys: ['deadForest', 'burningForest'] },
   ]},
   { zone: 'Midlands', groups: [

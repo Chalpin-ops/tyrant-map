@@ -67,6 +67,7 @@ The full tile list, grouped by zone theme, with each expected filename:
 | `deadlands` | Deadlands | no |
 | `deadRocks` | Dead Rocks | no |
 | `smallLavaPits` | Small Lava Pits | no |
+| `lavaPits` | Lava Pits | no |
 | `volcano` | Volcano | **yes** |
 | `lavaField` | Lava Field | **yes** |
 | `lavaPool` | Lava Pool | **yes** |
