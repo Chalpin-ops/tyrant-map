@@ -2091,6 +2091,76 @@
       "col": 203,
       "row": 80,
       "label": "Fertile Sanctuary"
+    },
+    {
+      "col": 93,
+      "row": 8,
+      "label": "Hermit's Study"
+    },
+    {
+      "col": 157,
+      "row": 8,
+      "label": "Militia Camp"
+    },
+    {
+      "col": 125,
+      "row": 35,
+      "label": "Stonemason's Hall"
+    },
+    {
+      "col": 47,
+      "row": 47,
+      "label": "Prospector's Claim"
+    },
+    {
+      "col": 203,
+      "row": 47,
+      "label": "Timber Mill"
+    },
+    {
+      "col": 19,
+      "row": 97,
+      "label": "Homestead Fields"
+    },
+    {
+      "col": 231,
+      "row": 97,
+      "label": "Surveyor's Camp"
+    },
+    {
+      "col": 19,
+      "row": 153,
+      "label": "Wayside Shrine"
+    },
+    {
+      "col": 231,
+      "row": 153,
+      "label": "Trading Post"
+    },
+    {
+      "col": 47,
+      "row": 203,
+      "label": "Herbalist's Hut"
+    },
+    {
+      "col": 203,
+      "row": 203,
+      "label": "Quarry Camp"
+    },
+    {
+      "col": 125,
+      "row": 215,
+      "label": "Forgotten Library"
+    },
+    {
+      "col": 93,
+      "row": 242,
+      "label": "Gravel Pits"
+    },
+    {
+      "col": 157,
+      "row": 242,
+      "label": "Drill Yard"
     }
   ]
 }
