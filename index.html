@@ -9,26 +9,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* Chrome palette — weathered bronze/parchment, not tech-dashboard blue.
-     Zone/terrain/marker colours (RING, TERRAIN, MARKER_DEFAULTS in the
-     script below) are a separate, deliberate palette tied to the game map
-     itself and aren't part of this. */
-  --bg:        #140f0f;
-  --panel:     #1c1515;
-  --panel-hi:  #241a1a;
-  --border:    #4a2424;
-  --border-lo: #301a1a;
-  --accent:      #b33838;
-  --accent-hi:   #e8685a;
-  --accent-bg:   #4a1c18;
-  --hover-bg:    #2e1c1a;
-  --text:      #d0c2bc;
-  --text-dim:  #8a706c;
-  --text-bright: #ede0da;
-  --input-bg:  #0f0b0b;
-  --danger-bg: #3a1408;
+  /* Chrome palette — near-black base, crimson reserved as the one standout
+     accent (active state, headings, links) rather than spread across every
+     border and background. Zone/terrain/marker colours (RING, TERRAIN,
+     MARKER_DEFAULTS in the script below) are a separate, deliberate
+     palette tied to the game map itself and aren't part of this. */
+  --bg:        #0a0808;
+  --panel:     #121010;
+  --panel-hi:  #181414;
+  --border:    #2c2222;
+  --border-lo: #1c1616;
+  --accent:      #b8322f;
+  --accent-hi:   #ff5a4a;
+  --accent-bg:   #341210;
+  --hover-bg:    #1e1818;
+  --text:      #c4bcb8;
+  --text-dim:  #766e6a;
+  --text-bright: #f0ece8;
+  --input-bg:  #060505;
+  --danger-bg: #200c08;
   --danger-text: #ff9068;
-  --danger-border: #7a3018;
+  --danger-border: #4a241a;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -37,9 +38,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-sy
 /* ── Toolbar ── */
 #toolbar{
   display:flex;flex-wrap:wrap;gap:5px;padding:7px 8px;
-  background:linear-gradient(#231717,#180f0f);
+  background:linear-gradient(#131010,#0c0a0a);
   border-bottom:1px solid var(--border);
-  box-shadow:0 1px 0 rgba(179,56,56,0.14);
+  box-shadow:0 1px 0 rgba(184,50,47,0.10);
   align-items:center;
   flex-shrink:0;
 }
@@ -50,7 +51,7 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-sy
   user-select:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.4);
 }
-.tool-btn:hover{background:var(--hover-bg);border-color:#7a3838}
+.tool-btn:hover{background:var(--hover-bg);border-color:#4a3a3a}
 .tool-btn.active{background:var(--accent-bg);color:var(--accent-hi);border-color:var(--accent)}
 .tool-btn.danger{background:var(--danger-bg);color:var(--danger-text);border-color:var(--danger-border)}
 
