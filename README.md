@@ -92,6 +92,7 @@ The full tile list, grouped by zone theme, with each expected filename:
 | `snowyPlains` | Snowy Plains | no |
 | `snowyForest` | Snowy Forest | no |
 | `snowyRocks` | Snowy Rocks | no |
+| `snowyMountains` | Snowy Mountains | **yes** |
 | `frozenRiver` | Frozen River | **yes** |
 | `frozenPond` | Frozen Pond | no |
 
