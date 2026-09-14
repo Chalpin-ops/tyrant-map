@@ -4,33 +4,61 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Tyrant Map Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&display=swap" rel="stylesheet">
 <style>
+:root{
+  /* Chrome palette — weathered bronze/parchment, not tech-dashboard blue.
+     Zone/terrain/marker colours (RING, TERRAIN, MARKER_DEFAULTS in the
+     script below) are a separate, deliberate palette tied to the game map
+     itself and aren't part of this. */
+  --bg:        #15110c;
+  --panel:     #1c1610;
+  --panel-hi:  #251d13;
+  --border:    #4a3a24;
+  --border-lo: #33281a;
+  --gold:      #c9973c;
+  --gold-hi:   #e8c878;
+  --text:      #d6c7a8;
+  --text-dim:  #8c7a58;
+  --text-bright: #f0dca0;
+  --input-bg:  #100d09;
+  --danger-bg: #3a1810;
+  --danger-text: #ff9068;
+  --danger-border: #6a3020;
+}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden;background:#0d1020;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 #app{display:flex;flex-direction:column;height:100vh}
 
 /* ── Toolbar ── */
 #toolbar{
-  display:flex;flex-wrap:wrap;gap:5px;padding:6px 8px;
-  background:#12151f;border-bottom:1px solid #2a3050;align-items:center;
+  display:flex;flex-wrap:wrap;gap:5px;padding:7px 8px;
+  background:linear-gradient(#241c13,#1a140e);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 1px 0 rgba(201,151,60,0.12);
+  align-items:center;
   flex-shrink:0;
 }
+.tb-sep{width:1px;align-self:stretch;margin:2px 3px;background:var(--border-lo);flex-shrink:0}
 .tool-btn{
-  font-size:11px;padding:5px 9px;border:1px solid #3a4060;border-radius:6px;
-  background:#1e2438;color:#c8d0e8;cursor:pointer;white-space:nowrap;font-weight:500;
+  font-size:11px;padding:5px 9px;border:1px solid var(--border);border-radius:3px;
+  background:var(--panel-hi);color:var(--text);cursor:pointer;white-space:nowrap;font-weight:500;
   user-select:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.4);
 }
-.tool-btn:hover{background:#252c42;border-color:#5060a0}
-.tool-btn.active{background:#2a4080;color:#90b8ff;border-color:#4a70d0}
-.tool-btn.danger{background:#3a1818;color:#ff8888;border-color:#6a2828}
+.tool-btn:hover{background:#2e2416;border-color:#6a5230}
+.tool-btn.active{background:#4a3416;color:var(--gold-hi);border-color:var(--gold)}
+.tool-btn.danger{background:var(--danger-bg);color:var(--danger-text);border-color:var(--danger-border)}
 
 /* ── Legend ── */
 #legend{
   display:flex;flex-wrap:wrap;gap:6px;padding:5px 8px;
-  background:#12151f;border-bottom:1px solid #2a3050;
+  background:var(--panel);border-bottom:1px solid var(--border);
   flex-shrink:0;
 }
-.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:#8090b8}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text-dim)}
 .ls{width:11px;height:11px;border-radius:2px;flex-shrink:0}
 
 /* ── Canvas ── */
@@ -42,84 +70,87 @@ canvas{display:block}
 /* ── Tooltip ── */
 #tip{
   position:absolute;pointer-events:none;
-  background:#0d1020ee;border:1px solid #3a4070;border-radius:6px;
-  padding:4px 8px;font-size:11px;color:#a0b8e8;
+  background:#100d09ee;border:1px solid var(--border);border-radius:4px;
+  padding:4px 8px;font-size:11px;color:var(--text-bright);
   display:none;z-index:20;white-space:nowrap;
 }
 
 /* ── Info bar ── */
 #info{
-  padding:5px 10px;background:#12151f;border-top:1px solid #2a3050;
-  font-size:11px;color:#6070a0;min-height:26px;flex-shrink:0;
+  padding:5px 10px;background:var(--panel);border-top:1px solid var(--border);
+  font-size:11px;color:var(--text-dim);min-height:26px;flex-shrink:0;
 }
 
 /* ── Label dialog (replaces window.prompt, which some embedded browsers block) ── */
 .modal-overlay{
-  position:fixed;inset:0;background:rgba(5,7,15,0.6);
+  position:fixed;inset:0;background:rgba(8,6,3,0.65);
   display:none;align-items:center;justify-content:center;z-index:50;
 }
 .modal-box{
-  background:#161b2c;border:1px solid #3a4060;border-radius:10px;
-  padding:16px;min-width:220px;box-shadow:0 12px 32px rgba(0,0,0,0.5);
+  background:var(--panel);border:1px solid var(--border);border-radius:6px;
+  padding:16px;min-width:220px;box-shadow:0 12px 32px rgba(0,0,0,0.6);
 }
-.modal-title{font-size:12px;color:#a0b0d8;margin-bottom:8px;}
+.modal-title{
+  font-family:'Cinzel',serif;font-weight:700;letter-spacing:0.03em;
+  font-size:13px;color:var(--gold-hi);margin-bottom:8px;
+}
 .modal-box input{
-  width:100%;font-size:14px;padding:7px 9px;border-radius:6px;
-  border:1px solid #3a4060;background:#0d1020;color:#e0e8ff;
+  width:100%;font-size:14px;padding:7px 9px;border-radius:4px;
+  border:1px solid var(--border);background:var(--input-bg);color:var(--text-bright);
 }
-.modal-color-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#a0b0d8;}
+.modal-color-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--text);}
 .modal-color-row input[type=color]{
-  width:36px;height:26px;padding:0;border:1px solid #3a4060;border-radius:6px;
-  background:#0d1020;cursor:pointer;
+  width:36px;height:26px;padding:0;border:1px solid var(--border);border-radius:4px;
+  background:var(--input-bg);cursor:pointer;
 }
-.modal-icon-row{display:none;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#a0b0d8;}
+.modal-icon-row{display:none;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--text);}
 .modal-icon-row.show{display:flex}
-.modal-icon-row input[type=file]{flex:1;min-width:0;font-size:10px;color:#a0b0d8}
+.modal-icon-row input[type=file]{flex:1;min-width:0;font-size:10px;color:var(--text)}
 #label-modal-icon-preview{
-  width:28px;height:28px;border-radius:5px;object-fit:cover;flex-shrink:0;
-  background:#0d1020;border:1px solid #3a4060;display:none;
+  width:28px;height:28px;border-radius:4px;object-fit:cover;flex-shrink:0;
+  background:var(--input-bg);border:1px solid var(--border);display:none;
 }
 #label-modal-icon-preview.show{display:block}
-.modal-icon-hint{display:none;font-size:10px;color:#6070a0;margin-top:5px;line-height:1.4;}
+.modal-icon-hint{display:none;font-size:10px;color:var(--text-dim);margin-top:5px;line-height:1.4;}
 .modal-icon-hint.show{display:block}
 .modal-actions{display:flex;gap:6px;margin-top:12px;justify-content:flex-end;}
 
 .guide-box{max-width:420px; max-height:82vh; overflow-y:auto;}
-.guide-body{font-size:12px; color:#c8d0e8; line-height:1.5; margin-top:2px;}
+.guide-body{font-size:12px; color:var(--text); line-height:1.5; margin-top:2px;}
 .guide-body p{margin:8px 0;}
 .guide-body ul{margin:8px 0; padding-left:18px;}
 .guide-body li{margin:6px 0;}
-.guide-body strong{color:#e0e8ff;}
+.guide-body strong{color:var(--text-bright);}
 
 /* ── Terrain palette (design mode only) ── */
 #toolbar{position:relative}
 #terrain-palette{
   display:none; position:absolute; top:100%; left:8px; margin-top:4px;
   width:290px; max-height:min(60vh, 480px); overflow-y:auto;
-  background:#12151f; border:1px solid #3a4060; border-radius:8px;
-  box-shadow:0 12px 32px rgba(0,0,0,0.55); padding:10px; z-index:30;
+  background:var(--panel); border:1px solid var(--border); border-radius:6px;
+  box-shadow:0 12px 32px rgba(0,0,0,0.6); padding:10px; z-index:30;
 }
 .palette-search{
-  width:100%; font-size:12px; padding:6px 8px; border-radius:6px;
-  border:1px solid #3a4060; background:#0d1020; color:#e0e8ff; margin-bottom:8px;
+  width:100%; font-size:12px; padding:6px 8px; border-radius:4px;
+  border:1px solid var(--border); background:var(--input-bg); color:var(--text-bright); margin-bottom:8px;
 }
 .palette-zone-title{
-  font-size:11px; font-weight:700; color:#8090b8; text-transform:uppercase;
-  letter-spacing:0.04em; margin:10px 0 4px;
+  font-family:'Cinzel',serif; font-size:11px; font-weight:700; color:var(--gold); text-transform:uppercase;
+  letter-spacing:0.06em; margin:10px 0 4px;
 }
 .palette-zone-title:first-child{margin-top:0}
-.palette-group-title{font-size:10px; color:#6070a0; margin:6px 0 3px;}
+.palette-group-title{font-size:10px; color:var(--text-dim); margin:6px 0 3px;}
 .palette-grid{display:grid; grid-template-columns:1fr 1fr; gap:4px;}
 .swatch{
   display:flex; align-items:center; gap:6px; padding:4px 6px;
-  border-radius:6px; border:1px solid transparent; cursor:pointer;
-  font-size:11px; color:#c8d0e8; background:#1a1f30; user-select:none;
+  border-radius:4px; border:1px solid transparent; cursor:pointer;
+  font-size:11px; color:var(--text); background:var(--panel-hi); user-select:none;
 }
-.swatch:hover{background:#232a42; border-color:#3a4060}
-.swatch.active{background:#2a4080; border-color:#4a70d0; color:#90b8ff}
+.swatch:hover{background:#2e2416; border-color:var(--border)}
+.swatch.active{background:#4a3416; border-color:var(--gold); color:var(--gold-hi)}
 .swatch .sw-color{
   width:16px; height:16px; border-radius:4px; flex-shrink:0; background-size:cover;
-  background-position:center; border:1px solid rgba(255,255,255,0.25);
+  background-position:center; border:1px solid rgba(255,255,255,0.2);
 }
 .swatch .sw-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .swatch .sw-lock{margin-left:auto; font-size:9px; opacity:0.75; flex-shrink:0}
@@ -130,24 +161,30 @@ canvas{display:block}
 
   <div id="toolbar">
     <button class="tool-btn" onclick="showGuide()">❓ Guide</button>
+    <span class="tb-sep"></span>
     <button class="tool-btn active" id="btn-pan"     onclick="setTool('pan')">🖐 Pan</button>
     <button class="tool-btn"        id="btn-hub"     onclick="setTool('hub')">⬡ Hub</button>
     <button class="tool-btn"        id="btn-outpost" onclick="setTool('outpost')">◈ Outpost</button>
     <button class="tool-btn"        id="btn-city"    onclick="setTool('city')">🏙 City</button>
     <button class="tool-btn"        id="btn-erase"   onclick="setTool('erase')">✕ Erase</button>
+    <span class="tb-sep"></span>
     <!-- Design-only: placing a *new* Dominion. Existing ones can still be
          dragged/renamed by anyone regardless of mode (e.g. to reposition a
          Watchtower after the Throne is recaptured) — see markerAt(). -->
     <button class="tool-btn"        id="btn-dominion" onclick="setTool('dominion')">👑 Dominion</button>
+    <span class="tb-sep" id="sep-dominion"></span>
     <!-- Design-only controls (terrain painting) — hidden unless the page is opened with ?design -->
     <button class="tool-btn"        id="btn-terrain" onclick="setTool('terrain')">⬢ Terrain</button>
     <div id="terrain-palette">
       <input id="terrain-search" class="palette-search" type="text" placeholder="Search terrain…" />
       <div id="terrain-groups"><!-- populated by renderTerrainPalette() --></div>
     </div>
+    <span class="tb-sep" id="sep-terrain"></span>
     <button class="tool-btn danger" onclick="clearAll()">✕ Clear</button>
+    <span class="tb-sep"></span>
     <button class="tool-btn"        onclick="exportJSON()">↓ Export</button>
     <button class="tool-btn"        onclick="importJSON()">↑ Import</button>
+    <span class="tb-sep" id="sep-save"></span>
     <!-- Design-only: downloads default.json — move it into map-data/ and commit
          it so index.html (in any mode) auto-loads this terrain from then on. -->
     <button class="tool-btn"        id="btn-save-default" onclick="saveDefaultMap()">💾 Save Default Map</button>
@@ -1352,6 +1389,11 @@ if (!DESIGN_MODE) {
   document.getElementById('btn-terrain').style.display = 'none';
   document.getElementById('btn-dominion').style.display = 'none';
   document.getElementById('btn-save-default').style.display = 'none';
+  // Hide their toolbar dividers too, so the design-only cluster doesn't
+  // leave a run of empty "| |" separators behind once its buttons vanish.
+  document.getElementById('sep-dominion').style.display = 'none';
+  document.getElementById('sep-terrain').style.display = 'none';
+  document.getElementById('sep-save').style.display = 'none';
 }
 infoEl.textContent = DESIGN_MODE
   ? '"Pan" is selected by default — safe to look around. Pick Terrain to paint, Dominion for a new contested point, or Hub/Outpost/City to place. Esc deselects back to Pan.'
