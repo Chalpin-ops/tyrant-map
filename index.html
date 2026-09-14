@@ -80,6 +80,8 @@ canvas{display:block}
   background:#0d1020;border:1px solid #3a4060;display:none;
 }
 #label-modal-icon-preview.show{display:block}
+.modal-icon-hint{display:none;font-size:10px;color:#6070a0;margin-top:5px;line-height:1.4;}
+.modal-icon-hint.show{display:block}
 .modal-actions{display:flex;gap:6px;margin-top:12px;justify-content:flex-end;}
 
 /* ── Terrain palette (design mode only) ── */
@@ -175,6 +177,7 @@ canvas{display:block}
         <input id="label-modal-icon-input" type="file" accept="image/*" />
         <button id="label-modal-icon-clear" class="tool-btn" type="button" title="Remove icon">✕</button>
       </div>
+      <div id="label-modal-icon-hint" class="modal-icon-hint"></div>
       <div class="modal-actions">
         <button id="label-modal-cancel" class="tool-btn">Cancel</button>
         <button id="label-modal-ok" class="tool-btn active">Save</button>
@@ -307,21 +310,55 @@ async function loadDefaultMap() {
 // Pre-loaded Image objects keyed by terrain type
 const IMGS = {};
 
-// Dominion icons are per-instance (each of the 34 is a unique named entity),
-// not per-type like terrain, so they're cached by their own data-URL instead
-// of a fixed key. Returns null until the image has actually finished
-// decoding, at which point onload triggers a re-render to pick it up.
+// Dominion icons follow the same convention as TERRAIN[key].img: drop a PNG
+// named after the Dominion's label into assets/dominions/ and it's picked up
+// automatically, no code change needed (see "Adding Dominion icons" in the
+// README for the exact filename list). Two Dominions sharing a label (e.g.
+// the two "Abandoned Mine"s) share one file, which matches the game itself.
+// A manually-uploaded icon (the rename dialog's Icon row, stored as `d.img`,
+// a data-URL) always overrides the convention file for that one Dominion.
+const DOM_ICON_DIR = 'assets/dominions/';
+function slugifyLabel(label) {
+  return (label || '')
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+function domIconSrc(d) {
+  if (d.img) return d.img;
+  const slug = slugifyLabel(d.label);
+  return slug ? `${DOM_ICON_DIR}${slug}.png` : null;
+}
+
+// Cached by resolved src (data-URL or convention file path) rather than a
+// fixed key, since which Dominion maps to which src can change (rename, or
+// an upload added/cleared). Returns null until the image has actually
+// finished loading — including a failed load, e.g. no matching file exists
+// yet — at which point it just falls back to the plain badge; onload
+// triggers a re-render so a freshly-available icon appears without a manual
+// refresh.
 const domImgCache = {};
-function getDomImg(dataUrl) {
-  if (!dataUrl) return null;
-  let img = domImgCache[dataUrl];
+function getDomImg(src) {
+  if (!src) return null;
+  let img = domImgCache[src];
   if (!img) {
     img = new Image();
     img.onload = () => requestRender();
-    img.src = dataUrl;
-    domImgCache[dataUrl] = img;
+    img.src = src;
+    domImgCache[src] = img;
   }
   return (img.complete && img.naturalWidth) ? img : null;
+}
+
+// The src actually being displayed for a Dominion right now (override or
+// convention file), only if it has confirmed to load — used to seed the
+// edit dialog's preview so it doesn't look blank when a convention file,
+// not an upload, is what's putting the icon on the map.
+function resolvedDomIconSrc(d) {
+  const src = domIconSrc(d);
+  return getDomImg(src) ? src : null;
 }
 
 // ── DOM refs ───────────────────────────────────
@@ -346,15 +383,19 @@ const labelModalIconRow    = document.getElementById('label-modal-icon-row');
 const labelModalIconInput  = document.getElementById('label-modal-icon-input');
 const labelModalIconPreview = document.getElementById('label-modal-icon-preview');
 const labelModalIconClear  = document.getElementById('label-modal-icon-clear');
+const labelModalIconHint   = document.getElementById('label-modal-icon-hint');
 const labelModalOk         = document.getElementById('label-modal-ok');
 const labelModalCancel     = document.getElementById('label-modal-cancel');
 let labelModalResolve  = null;
-let labelModalImg      = null; // staged icon as a data-URL, or null for none
+let labelModalImg      = null; // staged icon override as a data-URL, or null for none
+let labelModalFallback = null; // read-only preview src to show when there's no override (a convention file already doing the job)
 
 // title/defaultLabel/defaultColor as before; opts.showIcon reveals the icon
 // upload row (only meaningful for Dominions, which are unique named entities
 // that can each carry their own icon — Hub/Outpost/City stay symbol-based),
-// opts.img pre-fills it when editing a marker that already has one.
+// opts.img pre-fills it when editing a marker that already has an uploaded
+// override, opts.previewFallback shows what's currently rendering (e.g. a
+// assets/dominions/<slug>.png convention file) when there's no override yet.
 function askMarkerInfo(title, defaultLabel, defaultColor, opts = {}) {
   return new Promise(resolve => {
     labelModalResolve = resolve;
@@ -362,9 +403,11 @@ function askMarkerInfo(title, defaultLabel, defaultColor, opts = {}) {
     labelModalInput.value = defaultLabel;
     labelModalColor.value = defaultColor;
     labelModalImg = opts.img || null;
+    labelModalFallback = opts.previewFallback || null;
     labelModalIconRow.classList.toggle('show', !!opts.showIcon);
     labelModalIconInput.value = '';
     updateIconPreview();
+    updateIconHint();
     labelModal.style.display = 'flex';
     labelModalInput.focus();
     labelModalInput.select();
@@ -380,13 +423,25 @@ function currentMarkerInfo() {
   return { label: labelModalInput.value, color: labelModalColor.value, img: labelModalImg };
 }
 function updateIconPreview() {
-  if (labelModalImg) {
-    labelModalIconPreview.src = labelModalImg;
+  const src = labelModalImg || labelModalFallback;
+  if (src) {
+    labelModalIconPreview.src = src;
     labelModalIconPreview.classList.add('show');
   } else {
     labelModalIconPreview.removeAttribute('src');
     labelModalIconPreview.classList.remove('show');
   }
+}
+// Shows the exact filename assets/dominions/ needs for the label currently
+// typed in the dialog — updates live as the label is edited, since renaming
+// a Dominion changes which convention file it'll look for.
+function updateIconHint() {
+  if (!labelModalIconRow.classList.contains('show')) { labelModalIconHint.classList.remove('show'); return; }
+  const slug = slugifyLabel(labelModalInput.value);
+  labelModalIconHint.textContent = slug
+    ? `Auto-uses assets/dominions/${slug}.png if present. Upload above to override just this one.`
+    : 'Auto-uses a matching file in assets/dominions/ if present. Upload above to override just this one.';
+  labelModalIconHint.classList.add('show');
 }
 // Uploaded icons are downscaled + centre-cropped to a small square canvas
 // before being stored as a data-URL on the marker itself — keeps a
@@ -424,6 +479,7 @@ labelModalInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') closeLabelModal(currentMarkerInfo());
   if (e.key === 'Escape') closeLabelModal(null);
 });
+labelModalInput.addEventListener('input', updateIconHint);
 labelModal.addEventListener('mousedown', e => { if (e.target === labelModal) closeLabelModal(null); });
 
 // ── Hex math (pointy-top hexes, row-offset grid) ──
@@ -635,7 +691,7 @@ function render() {
       const { x, y } = h2p(d.col, d.row);
       const r = Math.min(s * 0.5, 13);
       const color = d.color || MARKER_DEFAULTS.dominion;
-      const img = getDomImg(d.img);
+      const img = getDomImg(domIconSrc(d));
       hexPath(x, y, r);
       if (img) {
         ctx.save(); ctx.clip();
@@ -741,7 +797,11 @@ function markerAt(col, row) {
 async function renameMarker(hit) {
   const m = hit.list[hit.idx];
   const isDominion = hit.type === 'dominion';
-  const result = await askMarkerInfo(`Edit marker at (${m.col},${m.row})`, m.label, m.color || MARKER_DEFAULTS[hit.type], { showIcon: isDominion, img: m.img || null });
+  const result = await askMarkerInfo(`Edit marker at (${m.col},${m.row})`, m.label, m.color || MARKER_DEFAULTS[hit.type], {
+    showIcon: isDominion,
+    img: m.img || null,
+    previewFallback: isDominion ? resolvedDomIconSrc(m) : null,
+  });
   if (result === null) { render(); return; }
   m.label = result.label;
   m.color = result.color;

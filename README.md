@@ -27,6 +27,8 @@ The plain "↓ Export" / "↑ Import" buttons still exist too, for ad-hoc backup
 index.html            ← the whole app (single file, no dependencies)
 assets/               ← terrain tile images (optional), one PNG per TERRAIN key —
                         see the full list of expected filenames in "Adding terrain images"
+assets/dominions/     ← Dominion icons (optional), one PNG per Dominion label —
+                        see "Adding Dominion icons" for the filename convention
 map-data/
   default.json        ← the committed baseline map — auto-loaded at boot (see below)
 README.md
@@ -103,6 +105,49 @@ So e.g. `deadRocks.png` goes in `assets/` and lights up the `deadRocks` tile aut
 
 **Blocking placement:** each terrain type has a `block` flag — `true` means a Hub/Outpost/City can't be placed or dragged onto it (see the tables above for the current defaults). Adjust these per your game's rules right next to the `img` field.
 
+## Adding Dominion icons
+
+Same idea as terrain images, but the filename is derived from the Dominion's **label** instead of a fixed key, since Dominions are map data you can add to or rename yourself: lowercase the label, drop apostrophes, and replace every other run of non-letters/digits with a single hyphen. `assets/dominions/<that>.png` then lights up automatically for every Dominion with that label — no code change needed. Two Dominions sharing a label (e.g. the two "Abandoned Mine" nodes) share one file, which matches how the game itself reuses art per Dominion type.
+
+The current 34 Dominions need these 30 files (some labels repeat):
+
+| Filename | Label(s) |
+|---|---|
+| `abandoned-mine.png` | Abandoned Mine *(×2)* |
+| `ancient-forge.png` | Ancient Forge |
+| `crumbling-rampart.png` | Crumbling Rampart |
+| `crystal-mine.png` | Crystal Mine |
+| `drill-yard.png` | Drill Yard |
+| `eastern-watchtower.png` | Eastern Watchtower |
+| `fertile-sanctuary.png` | Fertile Sanctuary *(×2)* |
+| `forgotten-library.png` | Forgotten Library |
+| `gravel-pits.png` | Gravel Pits |
+| `healers-refuge.png` | Healer's Refuge |
+| `herbalists-hut.png` | Herbalist's Hut |
+| `hermits-study.png` | Hermit's Study |
+| `homestead-fields.png` | Homestead Fields |
+| `iron-bastion.png` | Iron Bastion |
+| `militia-camp.png` | Militia Camp |
+| `northwestern-watchtower.png` | Northwestern Watchtower |
+| `old-barracks.png` | Old Barracks *(×2)* |
+| `prospectors-claim.png` | Prospector's Claim |
+| `quarry-camp.png` | Quarry Camp |
+| `ruined-archive.png` | Ruined Archive |
+| `southwestern-watchtower.png` | Southwestern Watchtower |
+| `stonemasons-hall.png` | Stonemason's Hall *(×2)* |
+| `surveyors-camp.png` | Surveyor's Camp |
+| `the-throne.png` | The Throne |
+| `timber-mill.png` | Timber Mill |
+| `trading-post.png` | Trading Post |
+| `verdant-grove.png` | Verdant Grove |
+| `war-monument.png` | War Monument |
+| `watchtower-ruins.png` | Watchtower Ruins |
+| `wayside-shrine.png` | Wayside Shrine |
+
+If you rename a Dominion or add a new one, the rename/recolour dialog (click a Dominion without dragging it) shows the exact filename it's currently looking for, live, under the Icon row.
+
+**One-off override:** that same Icon row also lets you upload an image directly for a single Dominion (downscaled and centre-cropped client-side, then stored inline on that Dominion as `img`, a data-URL). An upload always takes priority over the convention file for that one Dominion — handy for a Dominion that doesn't have official art yet, or a placeholder before you've prepared the real file.
+
 ## Controls
 
 | Action | Desktop | Mobile |
@@ -131,7 +176,7 @@ Dominions are contested points worth a buff — a `DOM_R` (6-tile) radius around
 - **Placing a new one** is design-mode only (`?design`) — Dominions are canonical map features, not something an individual guildmate should be creating.
 - **Dragging or renaming** is design-mode only *except* for a Dominion explicitly marked `"movable": true` in its JSON — currently just the three Watchtowers — which can be dragged/renamed in either mode, so anyone can reposition them after the Throne is recaptured without needing design-mode access. Everything else (the 15 fixed Dominions + the Throne) is locked to design-mode-only editing, so an ordinary guildmate can't accidentally nudge one.
 - **Erasing one** is design-mode only, same as terrain — it's map data, not a per-guild placement.
-- **Icons:** the same dialog used to rename/recolour a Dominion (click it without dragging) has an "Icon" row — pick an image file and it's downscaled, centre-cropped to a square, and stored right on that Dominion (`img`, a data-URL) so each of the 34 can carry its own distinct picture. Clicking ✕ next to the preview removes it. No icon set yet just falls back to the plain coloured hex badge with a "D".
+- **Icons** work the same way as terrain images — drop a correctly-named PNG into `assets/dominions/` and it's picked up automatically, no code change or upload needed. No icon set yet just falls back to the plain coloured hex badge with a "D". See "Adding Dominion icons" below for the exact filenames and an alternative one-off upload option.
 
 The current known Dominions (including the Throne and the three Watchtowers, whose positions shift each time the Throne is captured) are seeded in `map-data/default.json`. To make a *new* Dominion draggable outside design mode, add `"movable": true` to its entry there.
 
