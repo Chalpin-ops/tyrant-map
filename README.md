@@ -131,7 +131,7 @@ Dominions are contested points worth a buff — a `DOM_R` (6-tile) radius around
 - **Placing a new one** is design-mode only (`?design`) — Dominions are canonical map features, not something an individual guildmate should be creating.
 - **Dragging or renaming** is design-mode only *except* for a Dominion explicitly marked `"movable": true` in its JSON — currently just the three Watchtowers — which can be dragged/renamed in either mode, so anyone can reposition them after the Throne is recaptured without needing design-mode access. Everything else (the 15 fixed Dominions + the Throne) is locked to design-mode-only editing, so an ordinary guildmate can't accidentally nudge one.
 - **Erasing one** is design-mode only, same as terrain — it's map data, not a per-guild placement.
-- No art yet — they render as a plain coloured badge until per-Dominion images are added (not yet supported the way `TERRAIN[key].img` is; ask if you want that wired up once you have the art).
+- **Icons:** the same dialog used to rename/recolour a Dominion (click it without dragging) has an "Icon" row — pick an image file and it's downscaled, centre-cropped to a square, and stored right on that Dominion (`img`, a data-URL) so each of the 34 can carry its own distinct picture. Clicking ✕ next to the preview removes it. No icon set yet just falls back to the plain coloured hex badge with a "D".
 
 The current known Dominions (including the Throne and the three Watchtowers, whose positions shift each time the Throne is captured) are seeded in `map-data/default.json`. To make a *new* Dominion draggable outside design mode, add `"movable": true` to its entry there.
 
@@ -163,6 +163,8 @@ Exported JSON looks like this — safe to hand-edit:
 ```
 
 `color` is optional on every marker — omit it (or leave an older save without one) and it falls back to that type's default colour (`MARKER_DEFAULTS` in `index.html`). This is the same file shape used by both `map-data/default.json` and the "↓ Export"/"↑ Import" buttons.
+
+Dominions can also carry an optional `img` field — a data-URL holding a small uploaded icon (see "Dominions" above). It's plain text (base64) so it still diffs/reviews fine, just a longer line per Dominion that has one.
 
 ## Map constants
 

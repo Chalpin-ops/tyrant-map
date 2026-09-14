@@ -72,6 +72,14 @@ canvas{display:block}
   width:36px;height:26px;padding:0;border:1px solid #3a4060;border-radius:6px;
   background:#0d1020;cursor:pointer;
 }
+.modal-icon-row{display:none;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:#a0b0d8;}
+.modal-icon-row.show{display:flex}
+.modal-icon-row input[type=file]{flex:1;min-width:0;font-size:10px;color:#a0b0d8}
+#label-modal-icon-preview{
+  width:28px;height:28px;border-radius:5px;object-fit:cover;flex-shrink:0;
+  background:#0d1020;border:1px solid #3a4060;display:none;
+}
+#label-modal-icon-preview.show{display:block}
 .modal-actions{display:flex;gap:6px;margin-top:12px;justify-content:flex-end;}
 
 /* ── Terrain palette (design mode only) ── */
@@ -161,6 +169,11 @@ canvas{display:block}
       <div class="modal-color-row">
         <label for="label-modal-color">Colour</label>
         <input id="label-modal-color" type="color" />
+      </div>
+      <div id="label-modal-icon-row" class="modal-icon-row">
+        <img id="label-modal-icon-preview" alt="" />
+        <input id="label-modal-icon-input" type="file" accept="image/*" />
+        <button id="label-modal-icon-clear" class="tool-btn" type="button" title="Remove icon">✕</button>
       </div>
       <div class="modal-actions">
         <button id="label-modal-cancel" class="tool-btn">Cancel</button>
@@ -294,6 +307,23 @@ async function loadDefaultMap() {
 // Pre-loaded Image objects keyed by terrain type
 const IMGS = {};
 
+// Dominion icons are per-instance (each of the 34 is a unique named entity),
+// not per-type like terrain, so they're cached by their own data-URL instead
+// of a fixed key. Returns null until the image has actually finished
+// decoding, at which point onload triggers a re-render to pick it up.
+const domImgCache = {};
+function getDomImg(dataUrl) {
+  if (!dataUrl) return null;
+  let img = domImgCache[dataUrl];
+  if (!img) {
+    img = new Image();
+    img.onload = () => requestRender();
+    img.src = dataUrl;
+    domImgCache[dataUrl] = img;
+  }
+  return (img.complete && img.naturalWidth) ? img : null;
+}
+
 // ── DOM refs ───────────────────────────────────
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
@@ -308,20 +338,33 @@ const infoEl = document.getElementById('info');
 // making every Hub/Outpost/City placement look unresponsive. Also doubles as
 // the rename/recolour dialog for an existing marker (click it without
 // dragging) — handy for building a colour-coded "war map" of who owns what.
-const labelModal       = document.getElementById('label-modal');
-const labelModalTitle  = document.getElementById('label-modal-title');
-const labelModalInput  = document.getElementById('label-modal-input');
-const labelModalColor  = document.getElementById('label-modal-color');
-const labelModalOk     = document.getElementById('label-modal-ok');
-const labelModalCancel = document.getElementById('label-modal-cancel');
+const labelModal           = document.getElementById('label-modal');
+const labelModalTitle      = document.getElementById('label-modal-title');
+const labelModalInput      = document.getElementById('label-modal-input');
+const labelModalColor      = document.getElementById('label-modal-color');
+const labelModalIconRow    = document.getElementById('label-modal-icon-row');
+const labelModalIconInput  = document.getElementById('label-modal-icon-input');
+const labelModalIconPreview = document.getElementById('label-modal-icon-preview');
+const labelModalIconClear  = document.getElementById('label-modal-icon-clear');
+const labelModalOk         = document.getElementById('label-modal-ok');
+const labelModalCancel     = document.getElementById('label-modal-cancel');
 let labelModalResolve  = null;
+let labelModalImg      = null; // staged icon as a data-URL, or null for none
 
-function askMarkerInfo(title, defaultLabel, defaultColor) {
+// title/defaultLabel/defaultColor as before; opts.showIcon reveals the icon
+// upload row (only meaningful for Dominions, which are unique named entities
+// that can each carry their own icon — Hub/Outpost/City stay symbol-based),
+// opts.img pre-fills it when editing a marker that already has one.
+function askMarkerInfo(title, defaultLabel, defaultColor, opts = {}) {
   return new Promise(resolve => {
     labelModalResolve = resolve;
     labelModalTitle.textContent = title;
     labelModalInput.value = defaultLabel;
     labelModalColor.value = defaultColor;
+    labelModalImg = opts.img || null;
+    labelModalIconRow.classList.toggle('show', !!opts.showIcon);
+    labelModalIconInput.value = '';
+    updateIconPreview();
     labelModal.style.display = 'flex';
     labelModalInput.focus();
     labelModalInput.select();
@@ -334,8 +377,47 @@ function closeLabelModal(result) {
   if (resolve) resolve(result);
 }
 function currentMarkerInfo() {
-  return { label: labelModalInput.value, color: labelModalColor.value };
+  return { label: labelModalInput.value, color: labelModalColor.value, img: labelModalImg };
 }
+function updateIconPreview() {
+  if (labelModalImg) {
+    labelModalIconPreview.src = labelModalImg;
+    labelModalIconPreview.classList.add('show');
+  } else {
+    labelModalIconPreview.removeAttribute('src');
+    labelModalIconPreview.classList.remove('show');
+  }
+}
+// Uploaded icons are downscaled + centre-cropped to a small square canvas
+// before being stored as a data-URL on the marker itself — keeps a
+// full-resolution phone photo from bloating map-data/default.json.
+const ICON_SIZE = 96;
+labelModalIconInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = c.height = ICON_SIZE;
+      const cctx = c.getContext('2d');
+      const scale = Math.max(ICON_SIZE / img.width, ICON_SIZE / img.height);
+      const sw = ICON_SIZE / scale, sh = ICON_SIZE / scale;
+      const sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
+      cctx.drawImage(img, sx, sy, sw, sh, 0, 0, ICON_SIZE, ICON_SIZE);
+      labelModalImg = c.toDataURL('image/png');
+      updateIconPreview();
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+labelModalIconClear.addEventListener('click', () => {
+  labelModalImg = null;
+  labelModalIconInput.value = '';
+  updateIconPreview();
+});
 labelModalOk.addEventListener('click', () => closeLabelModal(currentMarkerInfo()));
 labelModalCancel.addEventListener('click', () => closeLabelModal(null));
 labelModalInput.addEventListener('keydown', e => {
@@ -545,19 +627,30 @@ function render() {
 
     // Dominions get a hex-shaped badge — distinct from the circle/triangle/
     // diamond used above, and a nod to them being contested points on the
-    // hex grid itself. Swap in per-dominion art via an `img` field later the
-    // same way TERRAIN images work, once real icons exist.
+    // hex grid itself. Each one can carry its own uploaded icon (`d.img`,
+    // set via the rename/recolour dialog) since they're unique named
+    // entities, unlike Hub/Outpost/City which stay symbol-based; falls back
+    // to the plain colour badge until an icon is set.
     S.dominions.forEach(d => {
       const { x, y } = h2p(d.col, d.row);
       const r = Math.min(s * 0.5, 13);
       const color = d.color || MARKER_DEFAULTS.dominion;
+      const img = getDomImg(d.img);
       hexPath(x, y, r);
-      ctx.fillStyle = color; ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
-      ctx.fillStyle = '#fff';
-      ctx.font = `bold ${Math.max(8, Math.min(s * 0.4, 10))}px sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('D', x, y);
+      if (img) {
+        ctx.save(); ctx.clip();
+        ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+        ctx.restore();
+        hexPath(x, y, r);
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+      } else {
+        ctx.fillStyle = color; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.max(8, Math.min(s * 0.4, 10))}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('D', x, y);
+      }
       if (d.label && s > 6) {
         ctx.fillStyle = color;
         ctx.font = `${Math.max(7, Math.min(s * 0.38, 10))}px sans-serif`;
@@ -647,10 +740,14 @@ function markerAt(col, row) {
 // renames and/or recolours it in place.
 async function renameMarker(hit) {
   const m = hit.list[hit.idx];
-  const result = await askMarkerInfo(`Edit marker at (${m.col},${m.row})`, m.label, m.color || MARKER_DEFAULTS[hit.type]);
+  const isDominion = hit.type === 'dominion';
+  const result = await askMarkerInfo(`Edit marker at (${m.col},${m.row})`, m.label, m.color || MARKER_DEFAULTS[hit.type], { showIcon: isDominion, img: m.img || null });
   if (result === null) { render(); return; }
   m.label = result.label;
   m.color = result.color;
+  if (isDominion) {
+    if (result.img) m.img = result.img; else delete m.img;
+  }
   infoEl.textContent = `Updated "${m.label}".`;
   render();
 }
@@ -711,9 +808,11 @@ async function handleClick(col, row) {
     infoEl.textContent = `City "${info.label}" placed at (${col},${row}) — ${rname}.`;
 
   } else if (S.tool === 'dominion' && DESIGN_MODE) {
-    const info = await askMarkerInfo(`Dominion at (${col},${row})`, 'Dominion', MARKER_DEFAULTS.dominion);
+    const info = await askMarkerInfo(`Dominion at (${col},${row})`, 'Dominion', MARKER_DEFAULTS.dominion, { showIcon: true });
     if (info === null) return;
-    S.dominions.push({ col, row, label: info.label, color: info.color });
+    const d = { col, row, label: info.label, color: info.color };
+    if (info.img) d.img = info.img;
+    S.dominions.push(d);
     infoEl.textContent = `Dominion "${info.label}" placed at (${col},${row}) — ${rname}. No-build radius: ${DOM_R}.`;
 
   } else if (S.tool === 'terrain' && DESIGN_MODE) {
