@@ -745,6 +745,50 @@ function drawTerritory(col, row, radius, fillColor) {
   }
 }
 
+// (dcol,drow) of the neighbor across each of a hex's 6 edges, indexed the
+// same way as hexPath's vertices (edge i runs from vertex i to vertex
+// i+1) — one table for even rows, one for odd, since this is a row-offset
+// ("odd-r") grid where odd rows are shifted half a hex right. Verified
+// against the app's own h2p/hdist rather than hand-derived, to avoid an
+// off-by-one in the offsets.
+const HEX_NEIGHBORS = [
+  [[1, 0], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1]],  // even row
+  [[1, 0], [1, 1], [0, 1], [-1, 0], [0, -1], [1, -1]],    // odd row
+];
+
+// Traces just the outer perimeter of a territory circle — the translucent
+// fill alone reads as a soft colour gradient at the edge, easy to miss;
+// this gives it the same crisp coloured border a Dominion's own tile gets.
+// For each hex in the territory, an edge only gets stroked if the hex
+// across it *isn't* also in the territory (or is off-grid), so interior
+// hex-to-hex edges stay invisible and only the true boundary is drawn.
+function drawTerritoryOutline(col, row, radius, strokeColor) {
+  const s = hs();
+  ctx.beginPath();
+  for (let dc = -radius; dc <= radius; dc++) {
+    for (let dr = -radius; dr <= radius; dr++) {
+      const tc = col + dc, tr = row + dr;
+      if (tc < 0 || tr < 0 || tc >= GRID || tr >= GRID) continue;
+      if (hdist(col, row, tc, tr) > radius) continue;
+      const { x, y } = h2p(tc, tr);
+      const nbrs = HEX_NEIGHBORS[tr % 2];
+      for (let i = 0; i < 6; i++) {
+        const [ddc, ddr] = nbrs[i];
+        const nc = tc + ddc, nr = tr + ddr;
+        const inside = nc >= 0 && nr >= 0 && nc < GRID && nr < GRID && hdist(col, row, nc, nr) <= radius;
+        if (!inside) {
+          const a1 = Math.PI / 3 * i - Math.PI / 6, a2 = Math.PI / 3 * (i + 1) - Math.PI / 6;
+          ctx.moveTo(x + s * Math.cos(a1), y + s * Math.sin(a1));
+          ctx.lineTo(x + s * Math.cos(a2), y + s * Math.sin(a2));
+        }
+      }
+    }
+  }
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
 // ── Main render ────────────────────────────────
 function render() {
   canvas.width  = cw.clientWidth;
@@ -786,6 +830,12 @@ function render() {
   S.outposts .forEach(o => drawTerritory(o.col, o.row, OUT_R, o.color || MARKER_DEFAULTS.outpost));
   S.dominions.forEach(d => drawTerritory(d.col, d.row, DOM_R, d.color || dominionColor(d)));
   ctx.globalAlpha = 1;
+
+  // Dominion no-build zones also get a crisp perimeter outline, not just
+  // the translucent fill above — matches the coloured border already
+  // drawn around a Dominion's own tile, and reads far more clearly than
+  // the fill's soft edge on its own.
+  S.dominions.forEach(d => drawTerritoryOutline(d.col, d.row, DOM_R, d.color || dominionColor(d)));
 
   // Hub, outpost and city icons (only when zoomed in enough)
   if (s > 5) {
