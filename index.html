@@ -84,6 +84,13 @@ canvas{display:block}
 .modal-icon-hint.show{display:block}
 .modal-actions{display:flex;gap:6px;margin-top:12px;justify-content:flex-end;}
 
+.guide-box{max-width:420px; max-height:82vh; overflow-y:auto;}
+.guide-body{font-size:12px; color:#c8d0e8; line-height:1.5; margin-top:2px;}
+.guide-body p{margin:8px 0;}
+.guide-body ul{margin:8px 0; padding-left:18px;}
+.guide-body li{margin:6px 0;}
+.guide-body strong{color:#e0e8ff;}
+
 /* ── Terrain palette (design mode only) ── */
 #toolbar{position:relative}
 #terrain-palette{
@@ -122,6 +129,7 @@ canvas{display:block}
 <div id="app">
 
   <div id="toolbar">
+    <button class="tool-btn" onclick="showGuide()">❓ Guide</button>
     <button class="tool-btn active" id="btn-pan"     onclick="setTool('pan')">🖐 Pan</button>
     <button class="tool-btn"        id="btn-hub"     onclick="setTool('hub')">⬡ Hub</button>
     <button class="tool-btn"        id="btn-outpost" onclick="setTool('outpost')">◈ Outpost</button>
@@ -181,6 +189,26 @@ canvas{display:block}
       <div class="modal-actions">
         <button id="label-modal-cancel" class="tool-btn">Cancel</button>
         <button id="label-modal-ok" class="tool-btn active">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="guide-modal" class="modal-overlay">
+    <div class="modal-box guide-box">
+      <div class="modal-title">Welcome to the Tyrant Map Planner</div>
+      <div class="guide-body">
+        <p><strong>Nothing here saves automatically.</strong> Everything you place lives only in this browser tab until you export it.</p>
+        <ul>
+          <li><strong>↓ Export</strong> downloads a file with everything currently on the map (terrain, Dominions, and your Hub/Outpost/City). Keep that file so you don't lose your layout, or send it to a guildmate to share what you've got.</li>
+          <li><strong>↑ Import</strong> loads a file someone exported (including your own earlier export), replacing what's currently shown.</li>
+          <li>Click a marker <strong>without dragging it</strong> to rename or recolour it — different colours per guild/alliance make an easy "war map".</li>
+          <li>Click-drag a marker to move it. Pick <strong>✕ Erase</strong>, then click a marker to remove it.</li>
+          <li>Pan by dragging empty space; zoom with the scroll wheel or a pinch.</li>
+        </ul>
+        <p>The terrain and Dominions you see on load are the guild's shared baseline map. Your own Hub/Outpost/City placements are the personal part — that's what's worth exporting.</p>
+      </div>
+      <div class="modal-actions">
+        <button id="guide-modal-ok" class="tool-btn active">Got it</button>
       </div>
     </div>
   </div>
@@ -481,6 +509,26 @@ labelModalInput.addEventListener('keydown', e => {
 });
 labelModalInput.addEventListener('input', updateIconHint);
 labelModal.addEventListener('mousedown', e => { if (e.target === labelModal) closeLabelModal(null); });
+
+// ── Guide dialog ────────────────────────────────
+// Shown automatically the first time someone opens this page in a given
+// browser (tracked via localStorage, so it won't nag on every visit), and
+// re-openable any time via the "❓ Guide" toolbar button. Covers the one
+// thing new users most often miss: nothing here saves itself — you have to
+// Export to keep or share a layout.
+const guideModal   = document.getElementById('guide-modal');
+const guideModalOk = document.getElementById('guide-modal-ok');
+const GUIDE_SEEN_KEY = 'tyrantMapGuideSeen';
+function showGuide() { guideModal.style.display = 'flex'; }
+function closeGuide() {
+  guideModal.style.display = 'none';
+  try { localStorage.setItem(GUIDE_SEEN_KEY, '1'); } catch (e) { /* private browsing, etc. — fine to just skip remembering */ }
+}
+guideModalOk.addEventListener('click', closeGuide);
+guideModal.addEventListener('mousedown', e => { if (e.target === guideModal) closeGuide(); });
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && guideModal.style.display === 'flex') closeGuide();
+});
 
 // ── Hex math (pointy-top hexes, row-offset grid) ──
 const hs  = () => S.zoom * 7;            // hex "radius" in px
@@ -1319,6 +1367,10 @@ window.addEventListener('keydown', e => {
 preloadImages(() => {
   loadDefaultMap().finally(() => { renderTerrainPalette(); render(); });
 });
+
+try {
+  if (!localStorage.getItem(GUIDE_SEEN_KEY)) showGuide();
+} catch (e) { /* private browsing, etc. — just skip the auto-open */ }
 </script>
 </body>
 </html>
