@@ -13,20 +13,22 @@
      Zone/terrain/marker colours (RING, TERRAIN, MARKER_DEFAULTS in the
      script below) are a separate, deliberate palette tied to the game map
      itself and aren't part of this. */
-  --bg:        #15110c;
-  --panel:     #1c1610;
-  --panel-hi:  #251d13;
-  --border:    #4a3a24;
-  --border-lo: #33281a;
-  --gold:      #c9973c;
-  --gold-hi:   #e8c878;
-  --text:      #d6c7a8;
-  --text-dim:  #8c7a58;
-  --text-bright: #f0dca0;
-  --input-bg:  #100d09;
-  --danger-bg: #3a1810;
+  --bg:        #140f0f;
+  --panel:     #1c1515;
+  --panel-hi:  #241a1a;
+  --border:    #4a2424;
+  --border-lo: #301a1a;
+  --accent:      #b33838;
+  --accent-hi:   #e8685a;
+  --accent-bg:   #4a1c18;
+  --hover-bg:    #2e1c1a;
+  --text:      #d0c2bc;
+  --text-dim:  #8a706c;
+  --text-bright: #ede0da;
+  --input-bg:  #0f0b0b;
+  --danger-bg: #3a1408;
   --danger-text: #ff9068;
-  --danger-border: #6a3020;
+  --danger-border: #7a3018;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -35,9 +37,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-sy
 /* ── Toolbar ── */
 #toolbar{
   display:flex;flex-wrap:wrap;gap:5px;padding:7px 8px;
-  background:linear-gradient(#241c13,#1a140e);
+  background:linear-gradient(#231717,#180f0f);
   border-bottom:1px solid var(--border);
-  box-shadow:0 1px 0 rgba(201,151,60,0.12);
+  box-shadow:0 1px 0 rgba(179,56,56,0.14);
   align-items:center;
   flex-shrink:0;
 }
@@ -48,8 +50,8 @@ html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-sy
   user-select:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.4);
 }
-.tool-btn:hover{background:#2e2416;border-color:#6a5230}
-.tool-btn.active{background:#4a3416;color:var(--gold-hi);border-color:var(--gold)}
+.tool-btn:hover{background:var(--hover-bg);border-color:#7a3838}
+.tool-btn.active{background:var(--accent-bg);color:var(--accent-hi);border-color:var(--accent)}
 .tool-btn.danger{background:var(--danger-bg);color:var(--danger-text);border-color:var(--danger-border)}
 
 /* ── Legend ── */
@@ -70,7 +72,7 @@ canvas{display:block}
 /* ── Tooltip ── */
 #tip{
   position:absolute;pointer-events:none;
-  background:#100d09ee;border:1px solid var(--border);border-radius:4px;
+  background:#0f0b0bee;border:1px solid var(--border);border-radius:4px;
   padding:4px 8px;font-size:11px;color:var(--text-bright);
   display:none;z-index:20;white-space:nowrap;
 }
@@ -92,7 +94,7 @@ canvas{display:block}
 }
 .modal-title{
   font-family:'Cinzel',serif;font-weight:700;letter-spacing:0.03em;
-  font-size:13px;color:var(--gold-hi);margin-bottom:8px;
+  font-size:13px;color:var(--accent-hi);margin-bottom:8px;
 }
 .modal-box input{
   width:100%;font-size:14px;padding:7px 9px;border-radius:4px;
@@ -135,7 +137,7 @@ canvas{display:block}
   border:1px solid var(--border); background:var(--input-bg); color:var(--text-bright); margin-bottom:8px;
 }
 .palette-zone-title{
-  font-family:'Cinzel',serif; font-size:11px; font-weight:700; color:var(--gold); text-transform:uppercase;
+  font-family:'Cinzel',serif; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase;
   letter-spacing:0.06em; margin:10px 0 4px;
 }
 .palette-zone-title:first-child{margin-top:0}
@@ -146,8 +148,8 @@ canvas{display:block}
   border-radius:4px; border:1px solid transparent; cursor:pointer;
   font-size:11px; color:var(--text); background:var(--panel-hi); user-select:none;
 }
-.swatch:hover{background:#2e2416; border-color:var(--border)}
-.swatch.active{background:#4a3416; border-color:var(--gold); color:var(--gold-hi)}
+.swatch:hover{background:var(--hover-bg); border-color:var(--border)}
+.swatch.active{background:var(--accent-bg); border-color:var(--accent); color:var(--accent-hi)}
 .swatch .sw-color{
   width:16px; height:16px; border-radius:4px; flex-shrink:0; background-size:cover;
   background-position:center; border:1px solid rgba(255,255,255,0.2);
